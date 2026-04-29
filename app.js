@@ -13,7 +13,7 @@ const curriculum = [
   { quarter: 12, courses: [] }
 ];
 const seasons = ["Fall", "Winter", "Spring", "Summer"];
-const gradeOptions = ["A", "B", "C", "D", "F", "W", "I"];
+const gradeOptions = ["A", "B", "C", "D", "F", "W", "I", "ENR"];
 const gradePoints = { A: 4, B: 3, C: 2, D: 1, F: 0 };
 const STORAGE_KEY = "meen-advising-tracker-v1";
 const app = { state: null, els: {} };
@@ -22,6 +22,7 @@ const makeId = () => (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUI
 const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
 const getActiveStudent = () => app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]];
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
+const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR"].includes(g);
 
 function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {} } } }; }
 function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; return p; } catch { return createDefaultState(); } }
@@ -48,7 +49,7 @@ function attemptedHoursForQuarter(student, quarterData) {
 
 
 function hasPassingGradeForCode(student, courseCode) {
-  return Object.entries(student.courses || {}).some(([key, rec]) => key.endsWith(`:${courseCode}`) && isPassing(rec.grade));
+  return Object.entries(student.courses || {}).some(([key, rec]) => key.endsWith(`:${courseCode}`) && isPrereqEligible(rec.grade));
 }
 
 function prereqsMet(student, rule) {
