@@ -17,7 +17,10 @@ const STORAGE_KEY = "meen-advising-tracker-v1";
 const app = { state: null, activeCourse: null, els: {} };
 
 function makeId() {
-  return globalThis.crypto?.randomUUID?.() || `student-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `student-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function debug(message, extra = "") {
@@ -35,7 +38,7 @@ function createDefaultState() {
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (!parsed?.students || typeof parsed.students !== "object") return createDefaultState();
+    if (!parsed || !parsed.students || typeof parsed.students !== "object") return createDefaultState();
 
     const ids = Object.keys(parsed.students);
     if (!ids.length) return createDefaultState();
@@ -60,7 +63,7 @@ function persist() {
 }
 
 function getActiveStudent() {
-  if (!app.state?.students) return null;
+  if (!app.state || !app.state.students) return null;
   return app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]] || null;
 }
 
@@ -80,7 +83,7 @@ function renderCurriculum() {
   const template = app.els.courseCardTemplate;
   const active = getActiveStudent();
 
-  if (!template?.content?.firstElementChild) {
+  if (!template || !template.content || !template.content.firstElementChild) {
     debug("Render blocked", "courseCardTemplate not found");
     return;
   }
@@ -157,7 +160,7 @@ function wireEvents() {
     const active = getActiveStudent();
     if (!active) return;
     const name = prompt("Enter new student name", active.name);
-    if (!name?.trim()) return;
+    if (!name || !name.trim()) return;
     active.name = name.trim();
     persist();
     renderStudentOptions();
@@ -187,7 +190,7 @@ function wireEvents() {
     if (!file) return;
     try {
       const imported = JSON.parse(await file.text());
-      if (!imported?.students || typeof imported.students !== "object") return alert("Invalid file format");
+      if (!imported || !imported.students || typeof imported.students !== "object") return alert("Invalid file format");
       localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
       app.state = loadState();
       persist();
@@ -196,7 +199,7 @@ function wireEvents() {
       debug("Import success", file.name);
     } catch (error) {
       alert("Could not import JSON file.");
-      debug("Import failed", error?.message || "unknown error");
+      debug("Import failed", (error && error.message) || "unknown error");
     } finally {
       e.target.value = "";
     }
@@ -235,7 +238,7 @@ function init() {
   debug("Init complete", `students=${Object.keys(app.state.students).length}`);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function safeInit() {
   try {
     init();
   } catch (error) {
@@ -243,8 +246,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const grid = document.getElementById("curriculumGrid");
     if (grid) grid.innerHTML = `<p role="alert">Initialization failed. Open debug panel and browser console.</p>`;
     const debugLog = document.getElementById("debugLog");
-    if (debugLog) debugLog.textContent = `Fatal init error: ${error?.message || "unknown"}`;
+    if (debugLog) debugLog.textContent = `Fatal init error: ${(error && error.message) || "unknown"}`;
     const debugPanel = document.getElementById("debugPanel");
     if (debugPanel) debugPanel.hidden = false;
   }
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", safeInit);
+} else {
+  safeInit();
+}
