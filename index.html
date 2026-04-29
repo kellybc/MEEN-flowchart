@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LA Tech ME Advising Tracker</title>
-    <link rel="stylesheet" href="styles.css?v=0.1.4" />
+    <link rel="stylesheet" href="styles.css?v=0.1.5" />
   </head>
   <body>
     <header>
       <h1>Louisiana Tech Mechanical Engineering Advising Tracker</h1>
-      <p class="version">Build: v0.1.4</p>
+      <p class="version">Build: v0.1.5</p>
       <p>Click a course to assign a grade. Student records are saved locally in your browser.</p>
     </header>
 
@@ -23,6 +23,7 @@
       <button id="renameStudentBtn">Rename</button>
       <button id="deleteStudentBtn" class="danger">Delete</button>
       <button id="exportBtn">Export JSON</button>
+      <span class="gpa-pill">GPA: <strong id="gpaValue">--</strong></span>
       <button id="toggleDebugBtn" type="button">Debug</button>
       <label class="import-label">
         Import JSON
@@ -69,6 +70,6 @@
       </button>
     </template>
 
-    <script src="app.js?v=0.1.4"></script>
+    <script src="app.js?v=0.1.5"></script>
   </body>
 </html>
