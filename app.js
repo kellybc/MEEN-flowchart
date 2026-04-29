@@ -118,7 +118,6 @@ function renderCurriculum() {
             app.state.curriculumRules[key] = { prereq: prereq.trim(), coreq: coreq.trim() };
             persist();
             renderCurriculum();
-  renderCurriculumRules();
             renderCurriculumRules();
           });
           buttonWrap.appendChild(reqBtn);
@@ -129,10 +128,12 @@ function renderCurriculum() {
             b.textContent = grade;
             b.addEventListener("click", () => {
               if (!prereqOk) return;
-              student.courses[key] = { ...(student.courses[key] || {}), grade };
+              const current = student.courses[key] || {};
+              const nextGrade = current.grade === grade ? "" : grade;
+              student.courses[key] = { ...current, grade: nextGrade };
               persist();
               renderCurriculum();
-  renderCurriculumRules();
+              renderCurriculumRules();
             });
             buttonWrap.appendChild(b);
           });
