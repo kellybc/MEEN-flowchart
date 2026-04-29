@@ -39,6 +39,13 @@ function loadState() {
     if (!parsed?.students || typeof parsed.students !== "object") return createDefaultState();
     const ids = Object.keys(parsed.students);
     if (!ids.length) return createDefaultState();
+    ids.forEach((id) => {
+      const student = parsed.students[id] || {};
+      if (!student.id) student.id = id;
+      if (!student.name) student.name = "Student";
+      if (!student.courses || typeof student.courses !== "object") student.courses = {};
+      parsed.students[id] = student;
+    });
     const activeId = parsed.activeStudentId && parsed.students[parsed.activeStudentId] ? parsed.activeStudentId : ids[0];
     return { ...parsed, activeStudentId: activeId };
   } catch {
@@ -71,7 +78,7 @@ function renderCurriculum() {
     term.courses.forEach(([code, name]) => {
       const node = template.content.firstElementChild.cloneNode(true);
       const key = `${term.quarter}:${code}`;
-      const record = active.courses[key] || {};
+      const record = (active.courses && active.courses[key]) || {};
       node.querySelector(".course-code").textContent = code;
       node.querySelector(".course-name").textContent = name;
       node.querySelector(".course-grade").textContent = record.grade ? `Grade: ${record.grade}` : "Not Taken";
@@ -85,7 +92,9 @@ function renderCurriculum() {
 
 function openGradeDialog(key, code, name) {
   activeCourse = key;
-  const record = getActiveStudent().courses[key] || {};
+  const student = getActiveStudent();
+  if (!student.courses || typeof student.courses !== "object") student.courses = {};
+  const record = student.courses[key] || {};
   dialogCourseTitle.textContent = `${code} — ${name}`;
   gradeSelect.value = record.grade || "";
   courseNotes.value = record.notes || "";
@@ -95,7 +104,9 @@ function openGradeDialog(key, code, name) {
 document.getElementById("saveGradeBtn").addEventListener("click", (e) => {
   e.preventDefault();
   if (!activeCourse) return;
-  getActiveStudent().courses[activeCourse] = { grade: gradeSelect.value, notes: courseNotes.value.trim() };
+  const student = getActiveStudent();
+  if (!student.courses || typeof student.courses !== "object") student.courses = {};
+  student.courses[activeCourse] = { grade: gradeSelect.value, notes: courseNotes.value.trim() };
   persist();
   renderCurriculum();
   gradeDialog.close();
