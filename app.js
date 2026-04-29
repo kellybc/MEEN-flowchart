@@ -23,8 +23,8 @@ const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state
 const getActiveStudent = () => app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]];
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 
-function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, students: { [id]: { id, name: "New Student", courses: {} } } }; }
-function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; return p; } catch { return createDefaultState(); } }
+function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {} } } }; }
+function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; return p; } catch { return createDefaultState(); } }
 
 function calculateGpa(student) {
   let pts = 0, hrs = 0;
@@ -86,7 +86,7 @@ function renderCurriculum() {
             <div class="course-code">${code}</div>
             <div class="course-name">${name} (${credits} cr)</div>
             <div class="course-grade">Grade: ${rec.grade || "Not Taken"}</div>
-            <div class="course-reqs">Pre-req: ${rec.prereq || "—"} | Co-req: ${rec.coreq || "—"}</div>
+            <div class="course-reqs">Pre-req: ${(app.state.curriculumRules[key] || {}).prereq || "—"} | Co-req: ${(app.state.curriculumRules[key] || {}).coreq || "—"}</div>
             <div class="grade-buttons" data-key="${key}"></div>
           `;
 
@@ -96,12 +96,14 @@ function renderCurriculum() {
           reqBtn.className = "req-btn";
           reqBtn.textContent = "Reqs";
           reqBtn.addEventListener("click", () => {
-            const current = student.courses[key] || {};
-            const prereq = prompt("Enter pre-requisite courses (comma-separated)", current.prereq || "") || "";
-            const coreq = prompt("Enter co-requisite courses (comma-separated)", current.coreq || "") || "";
-            student.courses[key] = { ...current, prereq: prereq.trim(), coreq: coreq.trim() };
+            const current = app.state.curriculumRules[key] || {};
+            const prereq = prompt("Global pre-requisite courses (comma-separated)", current.prereq || "") || "";
+            const coreq = prompt("Global co-requisite courses (comma-separated)", current.coreq || "") || "";
+            app.state.curriculumRules[key] = { prereq: prereq.trim(), coreq: coreq.trim() };
             persist();
             renderCurriculum();
+  renderCurriculumRules();
+            renderCurriculumRules();
           });
           buttonWrap.appendChild(reqBtn);
           gradeOptions.forEach((grade) => {
@@ -113,6 +115,7 @@ function renderCurriculum() {
               student.courses[key] = { ...(student.courses[key] || {}), grade };
               persist();
               renderCurriculum();
+  renderCurriculumRules();
             });
             buttonWrap.appendChild(b);
           });
@@ -128,9 +131,23 @@ function renderCurriculum() {
   app.els.gpaValue.textContent = calculateGpa(student);
 }
 
+
+function renderCurriculumRules() {
+  if (!app.els.rulesGrid) return;
+  app.els.rulesGrid.innerHTML = "";
+  curriculum.forEach((q) => q.courses.forEach(([code, name]) => {
+    const key = `Q${q.quarter}:${code}`;
+    const rules = app.state.curriculumRules[key] || {};
+    const row = document.createElement("div");
+    row.className = "rule-row";
+    row.innerHTML = `<strong>${code}</strong> <span>${name}</span><div>Pre: ${rules.prereq || "—"}</div><div>Co: ${rules.coreq || "—"}</div>`;
+    app.els.rulesGrid.appendChild(row);
+  }));
+}
+
 function init() {
   app.els = {
-    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn")
+    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel")
   };
   app.state = loadState();
 
@@ -142,9 +159,11 @@ function init() {
   app.els.importInput.addEventListener("change", async (e) => { const file = e.target.files[0]; if (!file) return; try { app.state = JSON.parse(await file.text()); persist(); renderStudentOptions(); renderCurriculum(); } catch { alert("Could not import JSON file."); } finally { e.target.value = ""; } });
   app.els.toggleDebugBtn.addEventListener("click", () => { app.els.debugPanel.style.display = app.els.debugPanel.style.display === "none" ? "block" : "none"; });
   app.els.addYearBtn.addEventListener("click", () => { app.state.yearCount += 1; persist(); renderCurriculum(); });
+  app.els.toggleRulesBtn.addEventListener("click", () => { app.els.rulesPanel.style.display = app.els.rulesPanel.style.display === "none" ? "block" : "none"; });
 
   renderStudentOptions();
   renderCurriculum();
+  renderCurriculumRules();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
