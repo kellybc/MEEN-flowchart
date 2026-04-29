@@ -46,6 +46,18 @@ function attemptedHoursForQuarter(student, quarterData) {
   return attempted;
 }
 
+
+function hasPassingGradeForCode(student, courseCode) {
+  return Object.entries(student.courses || {}).some(([key, rec]) => key.endsWith(`:${courseCode}`) && isPassing(rec.grade));
+}
+
+function prereqsMet(student, rule) {
+  if (!rule || !rule.prereq) return true;
+  const required = rule.prereq.split(",").map((v) => v.trim()).filter(Boolean);
+  if (!required.length) return true;
+  return required.every((code) => hasPassingGradeForCode(student, code));
+}
+
 function renderStudentOptions() {
   app.els.studentSelect.innerHTML = "";
   Object.values(app.state.students).forEach((s) => {
@@ -80,13 +92,16 @@ function renderCurriculum() {
         quarterData.courses.forEach(([code, name, credits]) => {
           const key = `Q${quarterNumber}:${code}`;
           const rec = student.courses[key] || {};
+          const rule = app.state.curriculumRules[key] || {};
+          const prereqOk = prereqsMet(student, rule);
           const card = document.createElement("article");
-          card.className = `course-card ${isPassing(rec.grade) ? "complete" : ""}`;
+          card.className = `course-card ${isPassing(rec.grade) ? "complete" : ""} ${prereqOk ? "" : "locked"}`;
           card.innerHTML = `
             <div class="course-code">${code}</div>
             <div class="course-name">${name} (${credits} cr)</div>
             <div class="course-grade">Grade: ${rec.grade || "Not Taken"}</div>
-            <div class="course-reqs">Pre-req: ${(app.state.curriculumRules[key] || {}).prereq || "—"} | Co-req: ${(app.state.curriculumRules[key] || {}).coreq || "—"}</div>
+            <div class="course-reqs">Pre-req: ${rule.prereq || "—"} | Co-req: ${rule.coreq || "—"}</div>
+            ${prereqOk ? "" : `<div class="prereq-warning">Prerequisites not yet met</div>`}
             <div class="grade-buttons" data-key="${key}"></div>
           `;
 
@@ -112,6 +127,7 @@ function renderCurriculum() {
             b.className = `grade-btn ${rec.grade === grade ? "selected" : ""}`;
             b.textContent = grade;
             b.addEventListener("click", () => {
+              if (!prereqOk) return;
               student.courses[key] = { ...(student.courses[key] || {}), grade };
               persist();
               renderCurriculum();
