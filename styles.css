@@ -56,3 +56,7 @@ menu { display: flex; justify-content: flex-end; gap: .5rem; margin: 0; padding:
 @media (max-width:600px){ .year-quarter-grid { grid-template-columns:1fr; } }
 
 .year-row { width:100%; }
+
+.attempted-hours { font-size:.78rem; color:#475569; font-weight:500; }
+.course-reqs { font-size:.78rem; color:#334155; margin-top:.2rem; }
+.req-btn { font-size:.72rem; padding:.2rem .35rem; border:1px dashed #64748b; background:#f8fafc; }

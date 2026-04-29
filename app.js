@@ -35,6 +35,17 @@ function calculateGpa(student) {
   return hrs ? (pts / hrs).toFixed(2) : "--";
 }
 
+
+function attemptedHoursForQuarter(student, quarterData) {
+  let attempted = 0;
+  quarterData.courses.forEach(([code, , credits]) => {
+    const key = `Q${quarterData.quarter}:${code}`;
+    const rec = student.courses[key] || {};
+    if (rec.grade) attempted += Number(credits) || 0;
+  });
+  return attempted;
+}
+
 function renderStudentOptions() {
   app.els.studentSelect.innerHTML = "";
   Object.values(app.state.students).forEach((s) => {
@@ -60,7 +71,8 @@ function renderCurriculum() {
 
       const quarterBlock = document.createElement("div");
       quarterBlock.className = "quarter-block";
-      quarterBlock.innerHTML = `<h3>${seasons[seasonIdx]} (Q${quarterNumber})</h3>`;
+      const attempted = attemptedHoursForQuarter(student, quarterData);
+      quarterBlock.innerHTML = `<h3>${seasons[seasonIdx]} (Q${quarterNumber}) <span class="attempted-hours">Attempted: ${attempted} hrs</span></h3>`;
 
       if (!quarterData || !quarterData.courses.length) {
         quarterBlock.innerHTML += `<p class="empty-quarter">No scheduled courses</p>`;
@@ -74,10 +86,24 @@ function renderCurriculum() {
             <div class="course-code">${code}</div>
             <div class="course-name">${name} (${credits} cr)</div>
             <div class="course-grade">Grade: ${rec.grade || "Not Taken"}</div>
+            <div class="course-reqs">Pre-req: ${rec.prereq || "—"} | Co-req: ${rec.coreq || "—"}</div>
             <div class="grade-buttons" data-key="${key}"></div>
           `;
 
           const buttonWrap = card.querySelector(".grade-buttons");
+          const reqBtn = document.createElement("button");
+          reqBtn.type = "button";
+          reqBtn.className = "req-btn";
+          reqBtn.textContent = "Reqs";
+          reqBtn.addEventListener("click", () => {
+            const current = student.courses[key] || {};
+            const prereq = prompt("Enter pre-requisite courses (comma-separated)", current.prereq || "") || "";
+            const coreq = prompt("Enter co-requisite courses (comma-separated)", current.coreq || "") || "";
+            student.courses[key] = { ...current, prereq: prereq.trim(), coreq: coreq.trim() };
+            persist();
+            renderCurriculum();
+          });
+          buttonWrap.appendChild(reqBtn);
           gradeOptions.forEach((grade) => {
             const b = document.createElement("button");
             b.type = "button";
