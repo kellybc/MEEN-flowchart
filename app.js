@@ -23,8 +23,8 @@ const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state
 const getActiveStudent = () => app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]];
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 
-function createDefaultState() { const id = makeId(); return { activeStudentId: id, students: { [id]: { id, name: "New Student", courses: {} } } }; }
-function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); return p; } catch { return createDefaultState(); } }
+function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, students: { [id]: { id, name: "New Student", courses: {} } } }; }
+function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; return p; } catch { return createDefaultState(); } }
 
 function calculateGpa(student) {
   let pts = 0, hrs = 0;
@@ -46,7 +46,7 @@ function renderCurriculum() {
   const student = getActiveStudent();
   app.els.curriculumGrid.innerHTML = "";
 
-  for (let year = 0; year < 3; year++) {
+  for (let year = 0; year < app.state.yearCount; year++) {
     const row = document.createElement("section");
     row.className = "year-row";
     row.innerHTML = `<h2>Year ${year + 1}</h2>`;
@@ -56,7 +56,7 @@ function renderCurriculum() {
 
     for (let seasonIdx = 0; seasonIdx < 4; seasonIdx++) {
       const quarterNumber = year * 4 + seasonIdx + 1;
-      const quarterData = curriculum.find((q) => q.quarter === quarterNumber);
+      const quarterData = curriculum.find((q) => q.quarter === quarterNumber) || { quarter: quarterNumber, courses: [] };
 
       const quarterBlock = document.createElement("div");
       quarterBlock.className = "quarter-block";
@@ -104,7 +104,7 @@ function renderCurriculum() {
 
 function init() {
   app.els = {
-    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel")
+    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn")
   };
   app.state = loadState();
 
@@ -115,6 +115,7 @@ function init() {
   app.els.exportBtn.addEventListener("click", () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(app.state, null, 2)], { type: "application/json" })); a.download = "meen-advising-records.json"; a.click(); URL.revokeObjectURL(a.href); });
   app.els.importInput.addEventListener("change", async (e) => { const file = e.target.files[0]; if (!file) return; try { app.state = JSON.parse(await file.text()); persist(); renderStudentOptions(); renderCurriculum(); } catch { alert("Could not import JSON file."); } finally { e.target.value = ""; } });
   app.els.toggleDebugBtn.addEventListener("click", () => { app.els.debugPanel.style.display = app.els.debugPanel.style.display === "none" ? "block" : "none"; });
+  app.els.addYearBtn.addEventListener("click", () => { app.state.yearCount += 1; persist(); renderCurriculum(); });
 
   renderStudentOptions();
   renderCurriculum();
