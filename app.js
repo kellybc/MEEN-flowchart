@@ -24,12 +24,15 @@ const courseNotes = document.getElementById("courseNotes");
 
 let state = loadState();
 let activeCourse = null;
+function makeId() {
+  return globalThis.crypto?.randomUUID?.() || `student-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 renderStudentOptions();
 renderCurriculum();
 
 function createDefaultState() {
-  const starterId = crypto.randomUUID();
+  const starterId = makeId();
   return { activeStudentId: starterId, students: { [starterId]: { id: starterId, name: "New Student", courses: {} } } };
 }
 
@@ -70,7 +73,7 @@ function renderCurriculum() {
   curriculumGrid.innerHTML = "";
   const template = document.getElementById("courseCardTemplate");
   const active = getActiveStudent();
-  if (!active) return;
+  if (!active || !template?.content?.firstElementChild) return;
   curriculum.forEach((term) => {
     const section = document.createElement("section");
     section.className = "semester";
@@ -114,7 +117,7 @@ document.getElementById("saveGradeBtn").addEventListener("click", (e) => {
 
 document.getElementById("addStudentBtn").addEventListener("click", () => {
   const name = newStudentName.value.trim(); if (!name) return;
-  const id = crypto.randomUUID();
+  const id = makeId();
   state.students[id] = { id, name, courses: {} }; state.activeStudentId = id; newStudentName.value = "";
   persist(); renderStudentOptions(); renderCurriculum();
 });
@@ -136,7 +139,15 @@ document.getElementById("exportBtn").addEventListener("click", () => {
 });
 document.getElementById("importInput").addEventListener("change", async (e) => {
   const file = e.target.files[0]; if (!file) return;
-  const imported = JSON.parse(await file.text());
-  if (!imported?.students || !imported?.activeStudentId) return alert("Invalid file format");
-  state = imported; persist(); renderStudentOptions(); renderCurriculum();
+  try {
+    const imported = JSON.parse(await file.text());
+    if (!imported?.students || typeof imported.students !== "object") return alert("Invalid file format");
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+    state = loadState();
+    persist(); renderStudentOptions(); renderCurriculum();
+  } catch {
+    alert("Could not import JSON file");
+  } finally {
+    e.target.value = "";
+  }
 });
