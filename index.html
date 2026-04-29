@@ -22,6 +22,7 @@
       <button id="renameStudentBtn">Rename</button>
       <button id="deleteStudentBtn" class="danger">Delete</button>
       <button id="exportBtn">Export JSON</button>
+      <button id="toggleDebugBtn" type="button">Debug</button>
       <label class="import-label">
         Import JSON
         <input id="importInput" type="file" accept="application/json" />
@@ -31,6 +32,11 @@
     <main>
       <div id="curriculumGrid" class="curriculum-grid"></div>
     </main>
+
+    <section id="debugPanel" class="debug-panel" hidden>
+      <h2>Debug Panel</h2>
+      <pre id="debugLog"></pre>
+    </section>
 
     <dialog id="gradeDialog">
       <form method="dialog" id="gradeForm">

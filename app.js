@@ -14,22 +14,18 @@ const curriculum = [
 ];
 
 const STORAGE_KEY = "meen-advising-tracker-v1";
-const studentSelect = document.getElementById("studentSelect");
-const newStudentName = document.getElementById("newStudentName");
-const curriculumGrid = document.getElementById("curriculumGrid");
-const gradeDialog = document.getElementById("gradeDialog");
-const dialogCourseTitle = document.getElementById("dialogCourseTitle");
-const gradeSelect = document.getElementById("gradeSelect");
-const courseNotes = document.getElementById("courseNotes");
+const app = { state: null, activeCourse: null, els: {} };
 
-let state = loadState();
-let activeCourse = null;
 function makeId() {
   return globalThis.crypto?.randomUUID?.() || `student-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-renderStudentOptions();
-renderCurriculum();
+function debug(message, extra = "") {
+  if (!app.els.debugLog) return;
+  const ts = new Date().toISOString();
+  app.els.debugLog.textContent += `[${ts}] ${message}${extra ? ` | ${extra}` : ""}\n`;
+  app.els.debugLog.scrollTop = app.els.debugLog.scrollHeight;
+}
 
 function createDefaultState() {
   const starterId = makeId();
@@ -40,8 +36,10 @@ function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (!parsed?.students || typeof parsed.students !== "object") return createDefaultState();
+
     const ids = Object.keys(parsed.students);
     if (!ids.length) return createDefaultState();
+
     ids.forEach((id) => {
       const student = parsed.students[id] || {};
       if (!student.id) student.id = id;
@@ -49,35 +47,53 @@ function loadState() {
       if (!student.courses || typeof student.courses !== "object") student.courses = {};
       parsed.students[id] = student;
     });
+
     const activeId = parsed.activeStudentId && parsed.students[parsed.activeStudentId] ? parsed.activeStudentId : ids[0];
     return { ...parsed, activeStudentId: activeId };
   } catch {
     return createDefaultState();
   }
 }
-const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-const getActiveStudent = () => state.students[state.activeStudentId] || state.students[Object.keys(state.students)[0]];
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
+}
+
+function getActiveStudent() {
+  if (!app.state?.students) return null;
+  return app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]] || null;
+}
 
 function renderStudentOptions() {
-  studentSelect.innerHTML = "";
-  Object.values(state.students).forEach((s) => {
+  app.els.studentSelect.innerHTML = "";
+  Object.values(app.state.students).forEach((s) => {
     const opt = document.createElement("option");
     opt.value = s.id;
     opt.textContent = s.name;
-    opt.selected = s.id === state.activeStudentId;
-    studentSelect.appendChild(opt);
+    opt.selected = s.id === app.state.activeStudentId;
+    app.els.studentSelect.appendChild(opt);
   });
 }
 
 function renderCurriculum() {
-  curriculumGrid.innerHTML = "";
-  const template = document.getElementById("courseCardTemplate");
+  app.els.curriculumGrid.innerHTML = "";
+  const template = app.els.courseCardTemplate;
   const active = getActiveStudent();
-  if (!active || !template?.content?.firstElementChild) return;
+
+  if (!template?.content?.firstElementChild) {
+    debug("Render blocked", "courseCardTemplate not found");
+    return;
+  }
+  if (!active) {
+    debug("Render blocked", "No active student");
+    return;
+  }
+
   curriculum.forEach((term) => {
     const section = document.createElement("section");
     section.className = "semester";
     section.innerHTML = `<h2>${term.quarter}</h2>`;
+
     term.courses.forEach(([code, name]) => {
       const node = template.content.firstElementChild.cloneNode(true);
       const key = `${term.quarter}:${code}`;
@@ -89,65 +105,146 @@ function renderCurriculum() {
       node.addEventListener("click", () => openGradeDialog(key, code, name));
       section.appendChild(node);
     });
-    curriculumGrid.appendChild(section);
+
+    app.els.curriculumGrid.appendChild(section);
   });
+  debug("Render complete", `quarters=${curriculum.length}`);
 }
 
 function openGradeDialog(key, code, name) {
-  activeCourse = key;
+  app.activeCourse = key;
   const student = getActiveStudent();
+  if (!student) return;
   if (!student.courses || typeof student.courses !== "object") student.courses = {};
   const record = student.courses[key] || {};
-  dialogCourseTitle.textContent = `${code} — ${name}`;
-  gradeSelect.value = record.grade || "";
-  courseNotes.value = record.notes || "";
-  gradeDialog.showModal();
+  app.els.dialogCourseTitle.textContent = `${code} — ${name}`;
+  app.els.gradeSelect.value = record.grade || "";
+  app.els.courseNotes.value = record.notes || "";
+  app.els.gradeDialog.showModal();
 }
 
-document.getElementById("saveGradeBtn").addEventListener("click", (e) => {
-  e.preventDefault();
-  if (!activeCourse) return;
-  const student = getActiveStudent();
-  if (!student.courses || typeof student.courses !== "object") student.courses = {};
-  student.courses[activeCourse] = { grade: gradeSelect.value, notes: courseNotes.value.trim() };
-  persist();
-  renderCurriculum();
-  gradeDialog.close();
-});
+function wireEvents() {
+  app.els.saveGradeBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    const student = getActiveStudent();
+    if (!student || !app.activeCourse) return;
+    if (!student.courses || typeof student.courses !== "object") student.courses = {};
+    student.courses[app.activeCourse] = { grade: app.els.gradeSelect.value, notes: app.els.courseNotes.value.trim() };
+    persist();
+    renderCurriculum();
+    app.els.gradeDialog.close();
+  });
 
-document.getElementById("addStudentBtn").addEventListener("click", () => {
-  const name = newStudentName.value.trim(); if (!name) return;
-  const id = makeId();
-  state.students[id] = { id, name, courses: {} }; state.activeStudentId = id; newStudentName.value = "";
-  persist(); renderStudentOptions(); renderCurriculum();
-});
-studentSelect.addEventListener("change", () => { state.activeStudentId = studentSelect.value; persist(); renderCurriculum(); });
-document.getElementById("renameStudentBtn").addEventListener("click", () => {
-  const name = prompt("Enter new student name", getActiveStudent().name);
-  if (!name) return; getActiveStudent().name = name.trim(); persist(); renderStudentOptions();
-});
-document.getElementById("deleteStudentBtn").addEventListener("click", () => {
-  if (Object.keys(state.students).length === 1) return alert("At least one student profile must remain.");
-  if (!confirm(`Delete ${getActiveStudent().name}?`)) return;
-  delete state.students[state.activeStudentId]; state.activeStudentId = Object.keys(state.students)[0];
-  persist(); renderStudentOptions(); renderCurriculum();
-});
-document.getElementById("exportBtn").addEventListener("click", () => {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }));
-  a.download = "meen-advising-records.json"; a.click(); URL.revokeObjectURL(a.href);
-});
-document.getElementById("importInput").addEventListener("change", async (e) => {
-  const file = e.target.files[0]; if (!file) return;
+  app.els.addStudentBtn.addEventListener("click", () => {
+    const name = app.els.newStudentName.value.trim();
+    if (!name) return;
+    const id = makeId();
+    app.state.students[id] = { id, name, courses: {} };
+    app.state.activeStudentId = id;
+    app.els.newStudentName.value = "";
+    persist();
+    renderStudentOptions();
+    renderCurriculum();
+  });
+
+  app.els.studentSelect.addEventListener("change", () => {
+    app.state.activeStudentId = app.els.studentSelect.value;
+    persist();
+    renderCurriculum();
+  });
+
+  app.els.renameStudentBtn.addEventListener("click", () => {
+    const active = getActiveStudent();
+    if (!active) return;
+    const name = prompt("Enter new student name", active.name);
+    if (!name?.trim()) return;
+    active.name = name.trim();
+    persist();
+    renderStudentOptions();
+  });
+
+  app.els.deleteStudentBtn.addEventListener("click", () => {
+    if (Object.keys(app.state.students).length === 1) return alert("At least one student profile must remain.");
+    const active = getActiveStudent();
+    if (!active || !confirm(`Delete ${active.name}?`)) return;
+    delete app.state.students[app.state.activeStudentId];
+    app.state.activeStudentId = Object.keys(app.state.students)[0];
+    persist();
+    renderStudentOptions();
+    renderCurriculum();
+  });
+
+  app.els.exportBtn.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(app.state, null, 2)], { type: "application/json" }));
+    a.download = "meen-advising-records.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  app.els.importInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const imported = JSON.parse(await file.text());
+      if (!imported?.students || typeof imported.students !== "object") return alert("Invalid file format");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+      app.state = loadState();
+      persist();
+      renderStudentOptions();
+      renderCurriculum();
+      debug("Import success", file.name);
+    } catch (error) {
+      alert("Could not import JSON file.");
+      debug("Import failed", error?.message || "unknown error");
+    } finally {
+      e.target.value = "";
+    }
+  });
+
+  app.els.toggleDebugBtn.addEventListener("click", () => {
+    app.els.debugPanel.hidden = !app.els.debugPanel.hidden;
+  });
+}
+
+function init() {
+  app.els = {
+    studentSelect: document.getElementById("studentSelect"),
+    newStudentName: document.getElementById("newStudentName"),
+    curriculumGrid: document.getElementById("curriculumGrid"),
+    gradeDialog: document.getElementById("gradeDialog"),
+    dialogCourseTitle: document.getElementById("dialogCourseTitle"),
+    gradeSelect: document.getElementById("gradeSelect"),
+    courseNotes: document.getElementById("courseNotes"),
+    saveGradeBtn: document.getElementById("saveGradeBtn"),
+    addStudentBtn: document.getElementById("addStudentBtn"),
+    renameStudentBtn: document.getElementById("renameStudentBtn"),
+    deleteStudentBtn: document.getElementById("deleteStudentBtn"),
+    exportBtn: document.getElementById("exportBtn"),
+    importInput: document.getElementById("importInput"),
+    courseCardTemplate: document.getElementById("courseCardTemplate"),
+    debugPanel: document.getElementById("debugPanel"),
+    debugLog: document.getElementById("debugLog"),
+    toggleDebugBtn: document.getElementById("toggleDebugBtn")
+  };
+
+  app.state = loadState();
+  wireEvents();
+  renderStudentOptions();
+  renderCurriculum();
+  debug("Init complete", `students=${Object.keys(app.state.students).length}`);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
   try {
-    const imported = JSON.parse(await file.text());
-    if (!imported?.students || typeof imported.students !== "object") return alert("Invalid file format");
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
-    state = loadState();
-    persist(); renderStudentOptions(); renderCurriculum();
-  } catch {
-    alert("Could not import JSON file");
-  } finally {
-    e.target.value = "";
+    init();
+  } catch (error) {
+    console.error("Initialization failed", error);
+    const grid = document.getElementById("curriculumGrid");
+    if (grid) grid.innerHTML = `<p role="alert">Initialization failed. Open debug panel and browser console.</p>`;
+    const debugLog = document.getElementById("debugLog");
+    if (debugLog) debugLog.textContent = `Fatal init error: ${error?.message || "unknown"}`;
+    const debugPanel = document.getElementById("debugPanel");
+    if (debugPanel) debugPanel.hidden = false;
   }
 });
