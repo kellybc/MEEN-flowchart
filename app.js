@@ -28,14 +28,25 @@ let activeCourse = null;
 renderStudentOptions();
 renderCurriculum();
 
-function loadState() {
-  const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-  if (parsed?.students && parsed.activeStudentId) return parsed;
+function createDefaultState() {
   const starterId = crypto.randomUUID();
   return { activeStudentId: starterId, students: { [starterId]: { id: starterId, name: "New Student", courses: {} } } };
 }
+
+function loadState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (!parsed?.students || typeof parsed.students !== "object") return createDefaultState();
+    const ids = Object.keys(parsed.students);
+    if (!ids.length) return createDefaultState();
+    const activeId = parsed.activeStudentId && parsed.students[parsed.activeStudentId] ? parsed.activeStudentId : ids[0];
+    return { ...parsed, activeStudentId: activeId };
+  } catch {
+    return createDefaultState();
+  }
+}
 const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-const getActiveStudent = () => state.students[state.activeStudentId];
+const getActiveStudent = () => state.students[state.activeStudentId] || state.students[Object.keys(state.students)[0]];
 
 function renderStudentOptions() {
   studentSelect.innerHTML = "";
@@ -52,6 +63,7 @@ function renderCurriculum() {
   curriculumGrid.innerHTML = "";
   const template = document.getElementById("courseCardTemplate");
   const active = getActiveStudent();
+  if (!active) return;
   curriculum.forEach((term) => {
     const section = document.createElement("section");
     section.className = "semester";
