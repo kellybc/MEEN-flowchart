@@ -36,3 +36,5 @@ menu { display: flex; justify-content: flex-end; gap: .5rem; margin: 0; padding:
 .debug-panel { margin: 0 1rem 1rem; padding: .75rem; background: #0f172a; color: #e2e8f0; border-radius: .5rem; }
 .debug-panel h2 { margin: 0 0 .5rem; font-size: 1rem; }
 #debugLog { margin: 0; max-height: 220px; overflow: auto; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
+
+.version { margin: .25rem 0 0; font-size: .85rem; opacity: .95; }

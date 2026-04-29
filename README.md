@@ -34,3 +34,7 @@ Then open:
 
 - Data is stored in browser `localStorage` under key `meen-advising-tracker-v1`.
 - This app is static HTML/CSS/JS; no backend is required.
+
+
+## Release
+- Current build: **v0.1.4**
