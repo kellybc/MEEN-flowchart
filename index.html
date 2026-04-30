@@ -38,12 +38,25 @@
         <button id="toggleDebugBtn" type="button">Debug</button>
       </div>
       <div class="toolbar-group">
+        <div class="view-toggle" role="group" aria-label="Curriculum display mode">
+          <button id="fullViewBtn" type="button" aria-pressed="true">Full View</button>
+          <button id="compactViewBtn" type="button" aria-pressed="false">Compact View</button>
+        </div>
+      </div>
+      <div class="toolbar-group">
         <button id="darkModeBtn" type="button">Dark Mode</button>
       </div>
     </section>
 
     <main>
       <div id="curriculumGrid" class="curriculum-grid"></div>
+      <section id="compactLegend" class="compact-legend" hidden>
+        <strong>Compact Legend:</strong>
+        <span>Blank = Not Taken</span>
+        <span>A/B/C/D/CR = Completed</span>
+        <span>ENR = Enrolled</span>
+        <span>Locked = Prereqs/Coreqs missing</span>
+      </section>
     </main>
 
     <section id="rulesPanel" class="rules-panel" style="display:none">
