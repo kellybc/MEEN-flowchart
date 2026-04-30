@@ -100,3 +100,14 @@ menu { display: flex; justify-content: flex-end; gap: .5rem; margin: 0; padding:
 :root[data-theme="dark"] .rules-panel { background:#111827; border-color:#334155; color:#e2e8f0; }
 :root[data-theme="dark"] .rule-row { background:#0f172a; border-color:#334155; color:#e2e8f0; }
 :root[data-theme="dark"] .debug-panel { background:#020617; color:#e2e8f0; }
+
+
+:root[data-theme="dark"] .grade-btn { background:#1f2937; color:#e5e7eb; border-color:#64748b; }
+:root[data-theme="dark"] .grade-btn.selected { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+:root[data-theme="dark"] .req-btn { background:#0f172a; color:#cbd5e1; border-color:#64748b; }
+:root[data-theme="dark"] .repeat-btn { background:#0f172a; color:#e5e7eb; border-color:#475569; }
+:root[data-theme="dark"] .course-card.locked { background:#1f2937; border-color:#475569; opacity:.9; }
+:root[data-theme="dark"] .course-card.locked .course-code,
+:root[data-theme="dark"] .course-card.locked .course-name,
+:root[data-theme="dark"] .course-card.locked .course-grade,
+:root[data-theme="dark"] .course-card.locked .course-reqs { color:#9ca3af; }
