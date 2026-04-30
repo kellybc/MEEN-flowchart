@@ -20,6 +20,8 @@ const seasons = ["Fall", "Winter", "Spring", "Summer"];
 const gradeOptions = ["A", "B", "C", "D", "F", "W", "I", "ENR", "CR"];
 const gradePoints = { A: 4, B: 3, C: 2, D: 1, F: 0 };
 const STORAGE_KEY = "meen-advising-tracker-v1";
+const VIEW_MODE_KEY = "meen-advising-view-mode-v1";
+const GRADE_CYCLE = ["", ...gradeOptions];
 const app = { state: null, els: {} };
 
 const makeId = () => (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : `student-${Date.now()}`;
@@ -104,10 +106,40 @@ function renderStudentOptions() {
 }
 
 function applyTheme() { document.documentElement.setAttribute("data-theme", app.state.theme || "light"); }
+function getViewMode() { return localStorage.getItem(VIEW_MODE_KEY) === "compact" ? "compact" : "full"; }
+function setViewMode(mode) { localStorage.setItem(VIEW_MODE_KEY, mode === "compact" ? "compact" : "full"); }
+function updateViewToggleUi() {
+  const compact = getViewMode() === "compact";
+  app.els.fullViewBtn.setAttribute("aria-pressed", String(!compact));
+  app.els.compactViewBtn.setAttribute("aria-pressed", String(compact));
+  app.els.compactLegend.hidden = !compact;
+}
+function setCourseGrade(student, key, grade, { enforceRequirements = true } = {}) {
+  const item = findCourseItemByKey(student, key);
+  if (!item) return false;
+  const rule = app.state.curriculumRules[item.ruleKey] || {};
+  if (enforceRequirements && !requirementsMet(student, rule)) return false;
+  const current = student.courses[key] || {};
+  student.courses[key] = { ...current, grade };
+  persist();
+  return true;
+}
+function findCourseItemByKey(student, key) {
+  for (let qn = 1; qn <= app.state.yearCount * 4; qn++) {
+    const found = getQuarterItems(student, qn).find((i) => i.key === key);
+    if (found) return found;
+  }
+  return null;
+}
+function nextGrade(current) {
+  const idx = GRADE_CYCLE.indexOf(current || "");
+  return GRADE_CYCLE[(idx + 1) % GRADE_CYCLE.length];
+}
 
 function renderCurriculum() {
   const student = getActiveStudent();
   app.els.curriculumGrid.innerHTML = "";
+  const compactView = getViewMode() === "compact";
 
   for (let year = 0; year < app.state.yearCount; year++) {
     const row = document.createElement("section");
@@ -123,6 +155,7 @@ function renderCurriculum() {
 
       const quarterBlock = document.createElement("div");
       quarterBlock.className = "quarter-block";
+      if (compactView) quarterBlock.classList.add("compact-quarter-block");
       quarterBlock.addEventListener("dragover", (ev) => ev.preventDefault());
       quarterBlock.addEventListener("drop", (ev) => {
         ev.preventDefault();
@@ -141,6 +174,35 @@ function renderCurriculum() {
       if (!quarterItems.length) {
         quarterBlock.innerHTML += `<p class="empty-quarter">No scheduled courses</p>`;
       } else {
+        if (compactView) {
+          const compactGrid = document.createElement("div");
+          compactGrid.className = "compact-tile-grid";
+          quarterItems.forEach(({ key, ruleKey, code, name, credits }) => {
+            const rec = student.courses[key] || {};
+            const rule = app.state.curriculumRules[ruleKey] || {};
+            const prereqOk = requirementsMet(student, rule);
+            const grade = rec.grade || "";
+            const tile = document.createElement("button");
+            tile.type = "button";
+            tile.className = `compact-course-tile ${prereqOk ? "available" : "locked"} ${isPassing(grade) || grade === "CR" ? "completed" : ""} ${grade === "ENR" ? "enrolled" : ""} ${["F", "W", "I"].includes(grade) ? "attention" : ""}`;
+            tile.dataset.courseKey = key;
+            tile.title = `${code} — ${name} (${credits} cr)\nPrereq: ${rule.prereq || "—"} | Coreq: ${rule.coreq || "—"}\nGrade: ${grade || "Not Taken"}`;
+            const stateLabel = !prereqOk ? "Locked" : (grade || "Not Taken");
+            tile.setAttribute("aria-label", `${code}, ${name}, current grade ${grade || "Not Taken"}, status ${stateLabel}, click to change grade`);
+            tile.innerHTML = `<span class="compact-code">${code}</span><span class="compact-grade">${grade || "—"}</span><span class="compact-state">${!prereqOk ? "Locked" : "Available"}</span>`;
+            tile.addEventListener("click", () => {
+              if (!prereqOk) return;
+              const newGrade = nextGrade(grade);
+              if (!setCourseGrade(student, key, newGrade)) return;
+              renderCurriculum();
+              renderCurriculumRules();
+            });
+            compactGrid.appendChild(tile);
+          });
+          quarterBlock.appendChild(compactGrid);
+          quarterGrid.appendChild(quarterBlock);
+          continue;
+        }
         quarterItems.forEach(({ key, ruleKey, code, name, credits }) => {
           const rec = student.courses[key] || {};
           const rule = app.state.curriculumRules[ruleKey] || {};
@@ -184,9 +246,8 @@ function renderCurriculum() {
             b.addEventListener("click", () => {
               if (!prereqOk) return;
               const current = student.courses[key] || {};
-              const nextGrade = current.grade === grade ? "" : grade;
-              student.courses[key] = { ...current, grade: nextGrade };
-              persist();
+              const nextSelectedGrade = current.grade === grade ? "" : grade;
+              setCourseGrade(student, key, nextSelectedGrade);
               renderCurriculum();
               renderCurriculumRules();
             });
@@ -225,6 +286,7 @@ function renderCurriculum() {
   }
   app.els.gpaValue.textContent = calculateGpa(student);
   applyTheme();
+  updateViewToggleUi();
 }
 
 
@@ -256,7 +318,7 @@ async function loadDefaultFromRepo() {
 
 async function init() {
   app.els = {
-    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel"), darkModeBtn: document.getElementById("darkModeBtn")
+    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel"), darkModeBtn: document.getElementById("darkModeBtn"), fullViewBtn: document.getElementById("fullViewBtn"), compactViewBtn: document.getElementById("compactViewBtn"), compactLegend: document.getElementById("compactLegend")
   };
   app.state = loadState();
   if (!localStorage.getItem(STORAGE_KEY)) {
@@ -274,6 +336,8 @@ async function init() {
   app.els.addYearBtn.addEventListener("click", () => { app.state.yearCount += 1; persist(); renderCurriculum(); });
   app.els.toggleRulesBtn.addEventListener("click", () => { app.els.rulesPanel.style.display = app.els.rulesPanel.style.display === "none" ? "block" : "none"; });
   app.els.darkModeBtn.addEventListener("click", () => { app.state.theme = app.state.theme === "dark" ? "light" : "dark"; persist(); applyTheme(); });
+  app.els.fullViewBtn.addEventListener("click", () => { setViewMode("full"); renderCurriculum(); });
+  app.els.compactViewBtn.addEventListener("click", () => { setViewMode("compact"); renderCurriculum(); });
 
   renderStudentOptions();
   renderCurriculum();
