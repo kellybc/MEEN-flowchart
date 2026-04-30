@@ -1,0 +1,15 @@
+{
+  "activeStudentId": "default-student",
+  "yearCount": 4,
+  "curriculumRules": {},
+  "theme": "light",
+  "students": {
+    "default-student": {
+      "id": "default-student",
+      "name": "New Student",
+      "courses": {},
+      "placements": {},
+      "repeats": {}
+    }
+  }
+}
