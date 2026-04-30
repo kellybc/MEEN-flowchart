@@ -20,6 +20,7 @@ Then open:
 2. Right-click `index.html`.
 3. Click **Open with Live Server**.
 
+
 ## How to test manually
 
 1. Open the app in your browser.
