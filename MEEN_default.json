@@ -1,15 +1,212 @@
 {
-  "activeStudentId": "default-student",
-  "yearCount": 4,
-  "curriculumRules": {},
-  "theme": "light",
+  "activeStudentId": "5df51918-41dc-48a4-ad34-4e6291060fb2",
   "students": {
-    "default-student": {
-      "id": "default-student",
+    "5df51918-41dc-48a4-ad34-4e6291060fb2": {
+      "id": "5df51918-41dc-48a4-ad34-4e6291060fb2",
       "name": "New Student",
+      "courses": {
+        "Q1:MATH 240": {
+          "grade": ""
+        },
+        "Q1:ENGR 120": {
+          "grade": ""
+        },
+        "Q1:CHEM 100": {
+          "grade": ""
+        },
+        "Q1:FYE 100": {
+          "grade": ""
+        },
+        "Q1:COMM 101": {
+          "grade": ""
+        },
+        "Q2:MATH 241": {
+          "grade": ""
+        },
+        "Q2:ENGR 121": {
+          "grade": ""
+        },
+        "Q2:CHEM 101": {
+          "grade": ""
+        },
+        "Q2:CHEM 103": {
+          "grade": ""
+        },
+        "Q2:ENGL 101": {
+          "grade": ""
+        }
+      },
+      "placements": {
+        "Q10:MEEN 332": 10,
+        "Q10:MATH 313": 10,
+        "Q2:MATH 241": 2,
+        "Q15:MEEN Elect II": 13,
+        "Q15:MEEN 482": 15,
+        "Q1:MATH 240": 1
+      },
+      "repeats": {}
+    },
+    "dad140b5-ddce-455d-88e9-e95921697698": {
+      "id": "dad140b5-ddce-455d-88e9-e95921697698",
+      "name": "test 1",
       "courses": {},
       "placements": {},
       "repeats": {}
+    }
+  },
+  "yearCount": 4,
+  "curriculumRules": {
+    "Q2:MATH 241": {
+      "prereq": "MATH 240",
+      "coreq": ""
+    },
+    "Q1:ENGR 120": {
+      "prereq": "",
+      "coreq": "MATH 240"
+    },
+    "Q2:ENGR 121": {
+      "prereq": "ENGR 120",
+      "coreq": "MATH 241"
+    },
+    "Q2:CHEM 101": {
+      "prereq": "CHEM 100",
+      "coreq": ""
+    },
+    "Q2:CHEM 103": {
+      "prereq": "",
+      "coreq": "CHEM 101"
+    },
+    "Q3:ENGR 122": {
+      "prereq": "ENGR 121",
+      "coreq": "MATH 242"
+    },
+    "Q3:MATH 242": {
+      "prereq": "MATH 241",
+      "coreq": ""
+    },
+    "Q3:CHEM 102": {
+      "prereq": "CHEM 101",
+      "coreq": ""
+    },
+    "Q3:PHYS 201": {
+      "prereq": "MATH 241",
+      "coreq": ""
+    },
+    "Q6:ENGL 102": {
+      "prereq": "ENGL 101",
+      "coreq": ""
+    },
+    "Q7:ENGL 303": {
+      "prereq": "ENGL 102",
+      "coreq": ""
+    },
+    "Q7:PHYS 202": {
+      "prereq": "PHYS 201",
+      "coreq": ""
+    },
+    "Q5:MATH 243": {
+      "prereq": "MATH 242",
+      "coreq": ""
+    },
+    "Q5:ENGR 220": {
+      "prereq": "MATH 242, PHYS 201, ENGR 122",
+      "coreq": ""
+    },
+    "Q5:MEMT 202": {
+      "prereq": "ENGR 122",
+      "coreq": ""
+    },
+    "Q6:MATH 244": {
+      "prereq": "MATH 243",
+      "coreq": ""
+    },
+    "Q6:ENGR 221": {
+      "prereq": "ENGR 122, MATH 242, PHYS 201",
+      "coreq": ""
+    },
+    "Q6:MEMT 203": {
+      "prereq": "ENGR 220",
+      "coreq": ""
+    },
+    "Q7:MATH 245": {
+      "prereq": "MATH 244",
+      "coreq": ""
+    },
+    "Q7:ENGR 222": {
+      "prereq": "MATH 242, ENGR 122",
+      "coreq": ""
+    },
+    "Q9:MEMT 313": {
+      "prereq": "ENGR 222, MEMT 203",
+      "coreq": ""
+    },
+    "Q9:MEEN 382": {
+      "prereq": "ENGR 221",
+      "coreq": ""
+    },
+    "Q9:MEEN 350": {
+      "prereq": "ENGR 220",
+      "coreq": ""
+    },
+    "Q9:MEMT 212": {
+      "prereq": "ENGR 220",
+      "coreq": ""
+    },
+    "Q10:MATH 313": {
+      "prereq": "",
+      "coreq": "MATH 245"
+    },
+    "Q10:MEEN 332": {
+      "prereq": "ENGR 222",
+      "coreq": ""
+    },
+    "Q10:MEEN 363": {
+      "prereq": "MEEN 350, MEMT 203",
+      "coreq": ""
+    },
+    "Q10:MEEN 321": {
+      "prereq": "MEMT 201",
+      "coreq": ""
+    },
+    "Q11:INEN 300": {
+      "prereq": "MATH 242",
+      "coreq": ""
+    },
+    "Q11:MEEN 353": {
+      "prereq": "MATH 245, ENGR 222, MEMT 313, MEEN 350",
+      "coreq": "MEMT 313"
+    },
+    "Q11:MEEN 371": {
+      "prereq": "ENGR 221, MATH 245, MATH 313, MEMT 203, MEEN 350",
+      "coreq": ""
+    },
+    "Q11:MEEN 361": {
+      "prereq": "MEMT 212, MEEN 350",
+      "coreq": ""
+    },
+    "Q13:INEN 406": {
+      "prereq": "INEN 300",
+      "coreq": ""
+    },
+    "Q13:MEEN 451": {
+      "prereq": "MEEN 353, MEMT 313",
+      "coreq": ""
+    },
+    "Q13:MEEN 480": {
+      "prereq": "MEEN 321",
+      "coreq": "MEEN 451, MEEN 462"
+    },
+    "Q13:MEEN 462": {
+      "prereq": "MEEN 361",
+      "coreq": ""
+    },
+    "Q14:MEEN 481": {
+      "prereq": "MEEN 480",
+      "coreq": ""
+    },
+    "Q15:MEEN 482": {
+      "prereq": "MEEN 481",
+      "coreq": ""
     }
   }
 }
