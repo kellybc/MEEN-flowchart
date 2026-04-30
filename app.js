@@ -30,6 +30,8 @@ const getActiveStudent = () => app.state.students[app.state.activeStudentId] || 
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR", "CR"].includes(g);
 
+const compactStatus = !prereqOk ? "Locked" : grade === "ENR" ? "Enrolled" : "Available_Test";
+
 function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {}, placements: {}, repeats: {} } } }; }
 function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; Object.values(p.students).forEach((st) => { if (!st.placements) st.placements = {}; if (!st.repeats) st.repeats = {}; if (!st.courses) st.courses = {}; }); return p; } catch { return createDefaultState(); } }
 
@@ -189,7 +191,7 @@ function renderCurriculum() {
             tile.title = `${code} — ${name} (${credits} cr)\nPrereq: ${rule.prereq || "—"} | Coreq: ${rule.coreq || "—"}\nGrade: ${grade || "Not Taken"}`;
             const stateLabel = !prereqOk ? "Locked" : (grade || "Not Taken");
             tile.setAttribute("aria-label", `${code}, ${name}, current grade ${grade || "Not Taken"}, status ${stateLabel}, click to change grade`);
-            tile.innerHTML = `<span class="compact-code">${code}</span><span class="compact-grade">${grade || "—"}</span><span class="compact-state">${!prereqOk ? "Locked" : "Available"}</span>`;
+            tile.innerHTML = `<span class="compact-code">${code}</span><span class="compact-grade">${grade || "—"}</span><span class="compact-state">${compactStatus}</span>`;            
             tile.addEventListener("click", () => {
               if (!prereqOk) return;
               const newGrade = nextGrade(grade);
