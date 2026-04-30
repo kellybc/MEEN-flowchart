@@ -1,19 +1,23 @@
 const curriculum = [
-  { quarter: 1, courses: [["MATH 240", "Precalculus", 5], ["ENGR 120", "Engineering Problem Solving I", 2], ["CHEM 100", "Chemistry Fundamentals", 3], ["FYE 100", "First-Year Experience", 1], ["COMM 101", "Communication", 3]] },
-  { quarter: 2, courses: [["MATH 241", "Calculus I", 5], ["ENGR 121", "Engineering Problem Solving II", 2], ["CHEM 101", "General Chemistry I", 3], ["CHEM 103", "General Chemistry I Lab", 1], ["ENGL 101", "Composition I", 3]] },
-  { quarter: 3, courses: [["MATH 242", "Calculus II", 5], ["ENGR 122", "Engineering Problem Solving III", 2], ["PHYS 201", "Engineering Physics I", 3], ["CHEM 102", "General Chemistry II", 3]] },
+  { quarter: 1, courses: [["MATH 240", "Calculus 0", 3], ["ENGR 120", "Engineering Problem Solving I", 2], ["CHEM 100", "General Chemistry", 2], ["FYE 100", "First-Year Experience", 1], ["COMM 101", "Communication", 3]] },
+  { quarter: 2, courses: [["MATH 241", "Calculus I", 3], ["ENGR 121", "Engineering Problem Solving II", 2], ["CHEM 101", "General Chemistry I", 2], ["CHEM 103", "General Chemistry I Lab", 1], ["ENGL 101", "Composition I", 3]] },
+  { quarter: 3, courses: [["MATH 242", "Calculus II", 3], ["ENGR 122", "Engineering Problem Solving III", 2], ["PHYS 201", "Engineering Physics I", 3], ["CHEM 102", "General Chemistry II", 3]] },
   { quarter: 4, courses: [] },
-  { quarter: 5, courses: [["MATH 243", "Calculus III", 5], ["ENGR 220", "Statics", 3], ["MEMT 202", "Materials Science", 3], ["ENGL 102", "Composition II", 3]] },
-  { quarter: 6, courses: [["MATH 244", "Differential Equations", 3], ["ENGR 221", "Electrical Engineering & Circuits I", 3], ["MEMT 203", "Mechanics of Materials", 3], ["BISC 101", "Biological Science", 3]] },
-  { quarter: 7, courses: [["MATH 245", "Linear Algebra", 3], ["ENGR 222", "Thermodynamics", 3], ["PHYS 202", "Engineering Physics II", 3], ["MEMT 313", "Manufacturing Processes", 3]] },
+  { quarter: 5, courses: [["MATH 243", "Calculus III", 3], ["ENGR 220", "Statics and Mechanics", 3], ["MEMT 202", "Materials Science", 3], ["BISC 101", "Biological Science", 3]] },
+  { quarter: 6, courses: [["MATH 244", "Calculus IV", 3], ["ENGR 221", "Circuits I", 3], ["MEMT 203", "Dynamics", 3], ["ENGL 102", "Composition II", 3]] },
+  { quarter: 7, courses: [["MATH 245", "Differential Equations", 3], ["ENGR 222", "Thermodynamics", 3], ["PHYS 202", "Engineering Physics II", 3], ["ENGL 303", "Technical Writing", 3]] },
   { quarter: 8, courses: [] },
-  { quarter: 9, courses: [["MEEN 360", "Fluid Mechanics", 3], ["MEEN 382", "Experimental Methods", 3], ["MEMT 212", "Materials Lab", 1], ["2 Social Sci", "Social Science Electives", 2]] },
-  { quarter: 10, courses: [["MATH 351", "Engineering Statistics", 3], ["MEEN 332", "Heat Transfer", 3], ["MEEN 363", "Mechanical Design I", 3], ["MEEN 321", "Dynamics & Vibrations", 3]] },
-  { quarter: 11, courses: [["INEN 300", "Engineering Economy", 3], ["MEEN 353", "Mechatronics", 3], ["MEEN 371", "Machine Design", 3], ["MEEN 361", "Kinematics", 3]] },
-  { quarter: 12, courses: [] }
+  { quarter: 9, courses: [["MEMT 313", "Fluid Mechanics", 3], ["MEEN 382", "Basic Measurements", 2], ["MEEN 350", "Computer Aided Design", 1], ["MEMT 212", "Intermediate Strengths", 3], ["Social Sci", "Social Science Elective", 3]] },
+  { quarter: 10, courses: [["MATH 313", "Numerical Methods", 3], ["MEEN 332", "Thermodynamics II", 3], ["MEEN 363", "Design of Machine Elements", 3], ["MEEN 321", "Manufacturing Processes", 2]] },
+  { quarter: 11, courses: [["INEN 300", "Engineering Economics", 2], ["MEEN 353", "Heat Transfer", 3], ["MEEN 371", "Dynamic Systems", 3], ["MEEN 361", "Advanced Strengths", 3]] },
+  { quarter: 12, courses: [] },
+  { quarter: 13, courses: [["INEN 406", "Project Management", 2], ["MEEN 451", "Thermal Design", 3], ["MEEN 480", "Capstone I", 1], ["MEEN 462", "Machine Element Design", 3]] },
+  { quarter: 14, courses: [["MEEN Elect", "Mechanical Elective", 3], ["COES Elect", "COES Elective", 3], ["MEEN 481", "Capstone II", 1], ["Humanities", "Humanities Elective", 3]] },
+  { quarter: 15, courses: [["MEEN Elect II", "Mechanical Elective", 3], ["MEEN 482", "Capstone III", 1], ["COES Elect II", "COES Elective", 3], ["ART", "Art Appreciation", 3], ["ECON", "Economics Elective", 3]] },
+  { quarter: 16, courses: [] }
 ];
 const seasons = ["Fall", "Winter", "Spring", "Summer"];
-const gradeOptions = ["A", "B", "C", "D", "F", "W", "I", "ENR"];
+const gradeOptions = ["A", "B", "C", "D", "F", "W", "I", "ENR", "CR"];
 const gradePoints = { A: 4, B: 3, C: 2, D: 1, F: 0 };
 const STORAGE_KEY = "meen-advising-tracker-v1";
 const app = { state: null, els: {} };
@@ -22,10 +26,10 @@ const makeId = () => (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUI
 const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
 const getActiveStudent = () => app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]];
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
-const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR"].includes(g);
+const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR", "CR"].includes(g);
 
-function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, theme: "light", students: { [id]: { id, name: "New Student", courses: {}, placements: {}, repeats: {} } } }; }
-function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; if (!p.theme) p.theme = "light"; Object.values(p.students).forEach((st) => { if (!st.placements) st.placements = {}; if (!st.repeats) st.repeats = {}; if (!st.courses) st.courses = {}; }); return p; } catch { return createDefaultState(); } }
+function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {}, placements: {}, repeats: {} } } }; }
+function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; Object.values(p.students).forEach((st) => { if (!st.placements) st.placements = {}; if (!st.repeats) st.repeats = {}; if (!st.courses) st.courses = {}; }); return p; } catch { return createDefaultState(); } }
 
 function calculateGpa(student) {
   let pts = 0, hrs = 0;
@@ -46,6 +50,14 @@ function attemptedHoursForQuarter(student, quarterNumber) {
   return attempted;
 }
 
+function totalHoursForQuarter(student, quarterNumber) {
+  let total = 0;
+  getQuarterItems(student, quarterNumber).forEach((item) => {
+    const rec = student.courses[item.key] || {};
+    total += Number(item.credits) || 0;
+  });
+  return total;
+}
 
 function hasPassingGradeForCode(student, courseCode) {
   return Object.entries(student.courses || {}).some(([key, rec]) => key.endsWith(`:${courseCode}`) && isPrereqEligible(rec.grade));
@@ -122,7 +134,8 @@ function renderCurriculum() {
         renderCurriculum();
       });
       const attempted = attemptedHoursForQuarter(student, quarterNumber);
-      quarterBlock.innerHTML = `<h3>${seasons[seasonIdx]} (Q${quarterNumber}) <span class="attempted-hours">Attempted: ${attempted} hrs</span></h3>`;
+      const total = totalHoursForQuarter(student, quarterNumber);
+      quarterBlock.innerHTML = `<h3>${seasons[seasonIdx]} (Q${quarterNumber}) <span class="attempted-hours">Attempted: ${attempted} hrs of ${total}</span></h3>`;
 
       const quarterItems = getQuarterItems(student, quarterNumber);
       if (!quarterItems.length) {
