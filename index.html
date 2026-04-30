@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LA Tech ME Advising Tracker</title>
+    <link rel="stylesheet" href="styles.css?v=0.2.3" />
+  </head>
+  <body>
+    <header>
+      <h1>Louisiana Tech Mechanical Engineering Advising Tracker</h1>
+      <p class="version">Build: v0.2.3</p>
+      <p>Click a course to assign a grade. Student records are saved locally in your browser.</p>
+    </header>
+
+    <section class="toolbar">
+      <label>
+        Student
+        <select id="studentSelect"></select>
+      </label>
+      <input id="newStudentName" type="text" placeholder="New student name" />
+      <button id="addStudentBtn">Add Student</button>
+      <button id="renameStudentBtn">Rename</button>
+      <button id="deleteStudentBtn" class="danger">Delete</button>
+      <button id="exportBtn">Export JSON</button>
+      <span class="gpa-pill">GPA: <strong id="gpaValue">--</strong></span>
+      <button id="addYearBtn" type="button">Add Year</button>
+      <button id="toggleRulesBtn" type="button">Curriculum Rules</button>
+      <button id="toggleDebugBtn" type="button">Debug</button>
+      <label class="import-label">
+        Import JSON
+        <input id="importInput" type="file" accept="application/json" />
+      </label>
+    </section>
+
+    <main>
+      <div id="curriculumGrid" class="curriculum-grid"></div>
+    </main>
+
+    <section id="rulesPanel" class="rules-panel" style="display:none">
+      <h2>Global Curriculum Rules</h2>
+      <div id="rulesGrid" class="rules-grid"></div>
+    </section>
+
+    <section id="debugPanel" class="debug-panel">
+      <h2>Debug Panel</h2>
+      <pre id="debugLog"></pre>
+    </section>
+
+    <dialog id="gradeDialog">
+      <form method="dialog" id="gradeForm">
+        <h3 id="dialogCourseTitle"></h3>
+        <label>
+          Grade
+          <select id="gradeSelect">
+            <option value="">Not Taken</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option><option>F</option>
+            <option>P</option><option>IP</option><option>W</option>
+          </select>
+        </label>
+        <label>
+          Notes
+          <textarea id="courseNotes" rows="3" placeholder="Advising notes..."></textarea>
+        </label>
+        <menu>
+          <button value="cancel">Cancel</button>
+          <button id="saveGradeBtn" value="default">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <template id="courseCardTemplate">
+      <button class="course-card" type="button">
+        <span class="course-code"></span>
+        <span class="course-name"></span>
+        <span class="course-grade">Not Taken</span>
+      </button>
+    </template>
+
+    <script src="app.js?v=0.2.3"></script>
+  </body>
+</html>
