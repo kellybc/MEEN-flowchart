@@ -103,6 +103,8 @@ function renderStudentOptions() {
   });
 }
 
+function applyTheme() { document.documentElement.setAttribute("data-theme", app.state.theme || "light"); }
+
 function renderCurriculum() {
   const student = getActiveStudent();
   app.els.curriculumGrid.innerHTML = "";
@@ -156,6 +158,7 @@ function renderCurriculum() {
             ${prereqOk ? "" : `<div class="prereq-warning">Prerequisites not yet met</div>`}
             <div class="grade-buttons" data-key="${key}"></div>
             <button type="button" class="repeat-btn">Copy to Later Quarter</button>
+            <button type="button" class="delete-copy-btn">Delete Copy</button>
           `;
 
           const buttonWrap = card.querySelector(".grade-buttons");
@@ -190,6 +193,16 @@ function renderCurriculum() {
             buttonWrap.appendChild(b);
           });
           const repeatBtn = card.querySelector(".repeat-btn");
+          const deleteCopyBtn = card.querySelector(".delete-copy-btn");
+          deleteCopyBtn.addEventListener("click", () => {
+            if (!student.repeats[key]) return;
+            if (!confirm("Delete this copied/repeat course?")) return;
+            delete student.repeats[key];
+            delete student.placements[key];
+            delete student.courses[key];
+            persist();
+            renderCurriculum();
+          });
           repeatBtn.addEventListener("click", () => {
             const target = Number(prompt("Copy to which quarter number?", String(quarterNumber + 1)));
             if (!target || target <= quarterNumber) return;
@@ -209,6 +222,7 @@ function renderCurriculum() {
     app.els.curriculumGrid.appendChild(row);
   }
   app.els.gpaValue.textContent = calculateGpa(student);
+  applyTheme();
 }
 
 
@@ -225,11 +239,28 @@ function renderCurriculumRules() {
   }));
 }
 
-function init() {
+
+async function loadDefaultFromRepo() {
+  try {
+    const res = await fetch("MEEN_default.json", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.students) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function init() {
   app.els = {
-    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel")
+    studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel"), darkModeBtn: document.getElementById("darkModeBtn")
   };
   app.state = loadState();
+  if (!localStorage.getItem(STORAGE_KEY)) {
+    const seeded = await loadDefaultFromRepo();
+    if (seeded) { app.state = seeded; persist(); }
+  }
 
   app.els.addStudentBtn.addEventListener("click", () => { const name = app.els.newStudentName.value.trim(); if (!name) return; const id = makeId(); app.state.students[id] = { id, name, courses: {}, placements: {}, repeats: {} }; app.state.activeStudentId = id; app.els.newStudentName.value = ""; persist(); renderStudentOptions(); renderCurriculum(); });
   app.els.studentSelect.addEventListener("change", () => { app.state.activeStudentId = app.els.studentSelect.value; persist(); renderCurriculum(); });
@@ -240,10 +271,11 @@ function init() {
   app.els.toggleDebugBtn.addEventListener("click", () => { app.els.debugPanel.style.display = app.els.debugPanel.style.display === "none" ? "block" : "none"; });
   app.els.addYearBtn.addEventListener("click", () => { app.state.yearCount += 1; persist(); renderCurriculum(); });
   app.els.toggleRulesBtn.addEventListener("click", () => { app.els.rulesPanel.style.display = app.els.rulesPanel.style.display === "none" ? "block" : "none"; });
+  app.els.darkModeBtn.addEventListener("click", () => { app.state.theme = app.state.theme === "dark" ? "light" : "dark"; persist(); applyTheme(); });
 
   renderStudentOptions();
   renderCurriculum();
   renderCurriculumRules();
 }
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { init(); }); else init();
