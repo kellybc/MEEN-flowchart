@@ -158,7 +158,7 @@ function renderCurriculum() {
             ${prereqOk ? "" : `<div class="prereq-warning">Prerequisites not yet met</div>`}
             <div class="grade-buttons" data-key="${key}"></div>
             <button type="button" class="repeat-btn">Copy to Later Quarter</button>
-            <button type="button" class="delete-copy-btn">Delete Copy</button>
+            ${student.repeats[key] ? `<button type="button" class="delete-copy-btn">Delete Copy</button>` : ""}
           `;
 
           const buttonWrap = card.querySelector(".grade-buttons");
@@ -194,15 +194,17 @@ function renderCurriculum() {
           });
           const repeatBtn = card.querySelector(".repeat-btn");
           const deleteCopyBtn = card.querySelector(".delete-copy-btn");
-          deleteCopyBtn.addEventListener("click", () => {
-            if (!student.repeats[key]) return;
-            if (!confirm("Delete this copied/repeat course?")) return;
-            delete student.repeats[key];
-            delete student.placements[key];
-            delete student.courses[key];
-            persist();
-            renderCurriculum();
-          });
+          if (deleteCopyBtn) {
+            deleteCopyBtn.addEventListener("click", () => {
+              if (!student.repeats[key]) return;
+              if (!confirm("Delete this copied/repeat course?")) return;
+              delete student.repeats[key];
+              delete student.placements[key];
+              delete student.courses[key];
+              persist();
+              renderCurriculum();
+            });
+          }
           repeatBtn.addEventListener("click", () => {
             const target = Number(prompt("Copy to which quarter number?", String(quarterNumber + 1)));
             if (!target || target <= quarterNumber) return;
