@@ -28,8 +28,8 @@ const getActiveStudent = () => app.state.students[app.state.activeStudentId] || 
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR"].includes(g);
 
-function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {} } } }; }
-function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; return p; } catch { return createDefaultState(); } }
+function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {}, placements: {}, repeats: {} } } }; }
+function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; Object.values(p.students).forEach((st) => { if (!st.placements) st.placements = {}; if (!st.repeats) st.repeats = {}; if (!st.courses) st.courses = {}; }); return p; } catch { return createDefaultState(); } }
 
 function calculateGpa(student) {
   let pts = 0, hrs = 0;
@@ -41,12 +41,11 @@ function calculateGpa(student) {
 }
 
 
-function attemptedHoursForQuarter(student, quarterData) {
+function attemptedHoursForQuarter(student, quarterNumber) {
   let attempted = 0;
-  quarterData.courses.forEach(([code, , credits]) => {
-    const key = `Q${quarterData.quarter}:${code}`;
-    const rec = student.courses[key] || {};
-    if (rec.grade) attempted += Number(credits) || 0;
+  getQuarterItems(student, quarterNumber).forEach((item) => {
+    const rec = student.courses[item.key] || {};
+    if (rec.grade) attempted += Number(item.credits) || 0;
   });
   return attempted;
 }
@@ -61,6 +60,32 @@ function prereqsMet(student, rule) {
   const required = rule.prereq.split(",").map((v) => v.trim()).filter(Boolean);
   if (!required.length) return true;
   return required.every((code) => hasPassingGradeForCode(student, code));
+}
+
+
+function coreqsMet(student, rule) {
+  if (!rule || !rule.coreq) return true;
+  const required = rule.coreq.split(",").map((v) => v.trim()).filter(Boolean);
+  if (!required.length) return true;
+  return required.every((code) => hasPassingGradeForCode(student, code));
+}
+
+function requirementsMet(student, rule) {
+  return prereqsMet(student, rule) && coreqsMet(student, rule);
+}
+
+function getQuarterItems(student, quarterNumber) {
+  const items = [];
+  curriculum.forEach((q) => q.courses.forEach(([code, name, credits]) => {
+    const baseKey = `Q${q.quarter}:${code}`;
+    const assigned = Number(student.placements[baseKey] || q.quarter);
+    if (assigned === quarterNumber) items.push({ key: baseKey, ruleKey: baseKey, code, name, credits });
+  }));
+  Object.entries(student.repeats || {}).forEach(([repeatKey, r]) => {
+    const assigned = Number(student.placements[repeatKey] || r.quarter || quarterNumber);
+    if (assigned === quarterNumber) items.push({ key: repeatKey, ruleKey: r.originKey || repeatKey, code: r.code, name: `${r.name} (Repeat)`, credits: r.credits });
+  });
+  return items;
 }
 
 function renderStudentOptions() {
@@ -88,18 +113,31 @@ function renderCurriculum() {
 
       const quarterBlock = document.createElement("div");
       quarterBlock.className = "quarter-block";
-      const attempted = attemptedHoursForQuarter(student, quarterData);
+      quarterBlock.addEventListener("dragover", (ev) => ev.preventDefault());
+      quarterBlock.addEventListener("drop", (ev) => {
+        ev.preventDefault();
+        const courseKey = ev.dataTransfer.getData("text/course-key");
+        if (!courseKey) return;
+        student.placements[courseKey] = quarterNumber;
+        if (student.repeats[courseKey]) student.repeats[courseKey].quarter = quarterNumber;
+        persist();
+        renderCurriculum();
+      });
+      const attempted = attemptedHoursForQuarter(student, quarterNumber);
       quarterBlock.innerHTML = `<h3>${seasons[seasonIdx]} (Q${quarterNumber}) <span class="attempted-hours">Attempted: ${attempted} hrs</span></h3>`;
 
-      if (!quarterData || !quarterData.courses.length) {
+      const quarterItems = getQuarterItems(student, quarterNumber);
+      if (!quarterItems.length) {
         quarterBlock.innerHTML += `<p class="empty-quarter">No scheduled courses</p>`;
       } else {
-        quarterData.courses.forEach(([code, name, credits]) => {
-          const key = `Q${quarterNumber}:${code}`;
+        quarterItems.forEach(({ key, ruleKey, code, name, credits }) => {
           const rec = student.courses[key] || {};
-          const rule = app.state.curriculumRules[key] || {};
-          const prereqOk = prereqsMet(student, rule);
+          const rule = app.state.curriculumRules[ruleKey] || {};
+          const prereqOk = requirementsMet(student, rule);
           const card = document.createElement("article");
+          card.draggable = true;
+          card.dataset.courseKey = key;
+          card.addEventListener("dragstart", (ev) => ev.dataTransfer.setData("text/course-key", key));
           card.className = `course-card ${isPassing(rec.grade) ? "complete" : ""} ${prereqOk ? "" : "locked"}`;
           card.innerHTML = `
             <div class="course-code">${code}</div>
@@ -108,6 +146,7 @@ function renderCurriculum() {
             <div class="course-reqs">Pre-req: ${rule.prereq || "—"} | Co-req: ${rule.coreq || "—"}</div>
             ${prereqOk ? "" : `<div class="prereq-warning">Prerequisites not yet met</div>`}
             <div class="grade-buttons" data-key="${key}"></div>
+            <button type="button" class="repeat-btn">Copy to Later Quarter</button>
           `;
 
           const buttonWrap = card.querySelector(".grade-buttons");
@@ -141,6 +180,16 @@ function renderCurriculum() {
             });
             buttonWrap.appendChild(b);
           });
+          const repeatBtn = card.querySelector(".repeat-btn");
+          repeatBtn.addEventListener("click", () => {
+            const target = Number(prompt("Copy to which quarter number?", String(quarterNumber + 1)));
+            if (!target || target <= quarterNumber) return;
+            const repeatId = `${key}:R${Date.now()}`;
+            student.repeats[repeatId] = { originKey: ruleKey, code, name: name.replace(" (Repeat)", ""), credits, quarter: target };
+            student.placements[repeatId] = target;
+            persist();
+            renderCurriculum();
+          });
           quarterBlock.appendChild(card);
         });
       }
@@ -173,7 +222,7 @@ function init() {
   };
   app.state = loadState();
 
-  app.els.addStudentBtn.addEventListener("click", () => { const name = app.els.newStudentName.value.trim(); if (!name) return; const id = makeId(); app.state.students[id] = { id, name, courses: {} }; app.state.activeStudentId = id; app.els.newStudentName.value = ""; persist(); renderStudentOptions(); renderCurriculum(); });
+  app.els.addStudentBtn.addEventListener("click", () => { const name = app.els.newStudentName.value.trim(); if (!name) return; const id = makeId(); app.state.students[id] = { id, name, courses: {}, placements: {}, repeats: {} }; app.state.activeStudentId = id; app.els.newStudentName.value = ""; persist(); renderStudentOptions(); renderCurriculum(); });
   app.els.studentSelect.addEventListener("change", () => { app.state.activeStudentId = app.els.studentSelect.value; persist(); renderCurriculum(); });
   app.els.renameStudentBtn.addEventListener("click", () => { const s = getActiveStudent(); const name = prompt("Enter new student name", s.name); if (!name || !name.trim()) return; s.name = name.trim(); persist(); renderStudentOptions(); });
   app.els.deleteStudentBtn.addEventListener("click", () => { if (Object.keys(app.state.students).length === 1) return alert("At least one student profile must remain."); if (!confirm(`Delete ${getActiveStudent().name}?`)) return; delete app.state.students[app.state.activeStudentId]; app.state.activeStudentId = Object.keys(app.state.students)[0]; persist(); renderStudentOptions(); renderCurriculum(); });
