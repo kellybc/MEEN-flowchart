@@ -68,3 +68,6 @@ menu { display: flex; justify-content: flex-end; gap: .5rem; margin: 0; padding:
 .course-card.locked { background:#e5e7eb; border-color:#9ca3af; opacity:.8; }
 .course-card.locked .grade-btn { opacity:.55; cursor:not-allowed; }
 .prereq-warning { font-size:.75rem; color:#7f1d1d; font-weight:600; }
+
+.repeat-btn { margin-top:.35rem; font-size:.72rem; padding:.2rem .35rem; border:1px dashed #334155; background:#fff; }
+.quarter-block { min-height: 120px; }
