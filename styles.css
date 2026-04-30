@@ -50,6 +50,8 @@
   --shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.55);
   --shadow-md: 0 10px 24px rgba(2, 6, 23, 0.55);
   --shadow-lg: 0 16px 34px rgba(2, 6, 23, 0.7);
+  --locked-text: #f8fafc;
+  --locked-label: #fde68a;
 }
 
 * { box-sizing: border-box; }
@@ -171,11 +173,29 @@ main { padding: 0 var(--space-4) var(--space-6); }
 .compact-code { font-size:.76rem; font-weight:800; line-height:1.1; }
 .compact-grade { font-size:.83rem; font-weight:800; }
 .compact-state { grid-column: 1 / -1; font-size:.65rem; letter-spacing:.03em; text-transform:uppercase; color:var(--text-muted); }
-.compact-course-tile.locked { opacity:.7; border-style:dashed; cursor:not-allowed; }
+.compact-course-tile.locked { background: #fee2e2;  border-color: #ef4444;opacity:.7; border-style:dashed; cursor:not-allowed; color: var(--locked-text);}
 .compact-course-tile.completed { border-color: color-mix(in oklab, var(--success-text), white 55%); background: var(--success-bg); }
 .compact-course-tile.enrolled { border-color: color-mix(in oklab, var(--primary), white 25%); }
 .compact-course-tile.attention { border-color: var(--accent-warning); }
 .compact-course-tile:focus-visible { outline: 3px solid color-mix(in oklab, var(--focus), transparent 50%); outline-offset: 1px; }
+
+:root[data-theme="dark"] .compact-course-tile.locked {
+  color: var(--locked-text);
+}
+
+:root[data-theme="dark"] .compact-course-tile.locked.compact-state {
+  color: var(--locked-label);
+}
+
+:root[data-theme="dark"] .compact-course-tile.locked {
+  background: #3b1f24;
+  border-color: #f87171;
+  color: var(--locked-text);
+}
+
+:root[data-theme="dark"] .compact-course-tile.locked .compact-state {
+  color: var(--locked-label);
+}
 
 .course-card {
   width:100%;
