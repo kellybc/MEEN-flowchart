@@ -37,4 +37,4 @@ Then open:
 
 
 ## Release
-- Current build: **v0.2.3**
+- Current build: **v0.2.4**

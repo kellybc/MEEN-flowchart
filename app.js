@@ -155,10 +155,10 @@ function renderCurriculum() {
           reqBtn.className = "req-btn";
           reqBtn.textContent = "Reqs";
           reqBtn.addEventListener("click", () => {
-            const current = app.state.curriculumRules[key] || {};
+            const current = app.state.curriculumRules[ruleKey] || {};
             const prereq = prompt("Global pre-requisite courses (comma-separated)", current.prereq || "") || "";
             const coreq = prompt("Global co-requisite courses (comma-separated)", current.coreq || "") || "";
-            app.state.curriculumRules[key] = { prereq: prereq.trim(), coreq: coreq.trim() };
+            app.state.curriculumRules[ruleKey] = { prereq: prereq.trim(), coreq: coreq.trim() };
             persist();
             renderCurriculum();
             renderCurriculumRules();
