@@ -36,17 +36,23 @@ function normalizeState(raw) {
   const p = raw;
   if (!p.yearCount || p.yearCount < 4) p.yearCount = 4;
   if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {};
-  Object.values(p.students).forEach((st) => {
+  const normalizedStudents = {};
+  Object.entries(p.students).forEach(([studentKey, st]) => {
     if (!st || typeof st !== "object") return;
-    if (!st.id) st.id = makeId();
-    if (!st.name) st.name = "New Student";
-    if (!st.placements || typeof st.placements !== "object") st.placements = {};
-    if (!st.repeats || typeof st.repeats !== "object") st.repeats = {};
-    if (!st.courses || typeof st.courses !== "object") st.courses = {};
+    const id = typeof st.id === "string" && st.id.trim() ? st.id : (typeof studentKey === "string" && studentKey.trim() ? studentKey : makeId());
+    normalizedStudents[id] = {
+      ...st,
+      id,
+      name: typeof st.name === "string" && st.name.trim() ? st.name.trim() : "New Student",
+      placements: st.placements && typeof st.placements === "object" ? st.placements : {},
+      repeats: st.repeats && typeof st.repeats === "object" ? st.repeats : {},
+      courses: st.courses && typeof st.courses === "object" ? st.courses : {}
+    };
   });
-  const studentIds = Object.keys(p.students);
+  p.students = normalizedStudents;
+  const studentIds = Object.keys(normalizedStudents);
   if (!studentIds.length) return createDefaultState();
-  if (!p.activeStudentId || !p.students[p.activeStudentId]) p.activeStudentId = studentIds[0];
+  if (!p.activeStudentId || !normalizedStudents[p.activeStudentId]) p.activeStudentId = studentIds[0];
   return p;
 }
 function loadState() { try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); } catch { return createDefaultState(); } }
