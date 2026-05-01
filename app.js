@@ -25,7 +25,20 @@ const GRADE_CYCLE = ["", ...gradeOptions];
 const app = { state: null, els: {} };
 
 const makeId = () => (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : `student-${Date.now()}`;
-const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
+const hasStorage = () => {
+  try {
+    const key = "__storage_test__";
+    localStorage.setItem(key, "1");
+    localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const persist = () => {
+  if (!hasStorage()) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state)); } catch {}
+};
 const getActiveStudent = () => {
   if (!app.state || !app.state.students) return null;
   const active = app.state.students[app.state.activeStudentId];
@@ -65,7 +78,10 @@ function normalizeState(raw) {
   if (!p.activeStudentId || !normalizedStudents[p.activeStudentId]) p.activeStudentId = studentIds[0];
   return p;
 }
-function loadState() { try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); } catch { return createDefaultState(); } }
+function loadState() {
+  if (!hasStorage()) return createDefaultState();
+  try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); } catch { return createDefaultState(); }
+}
 
 function calculateGpa(student) {
   let pts = 0, hrs = 0;
@@ -140,8 +156,14 @@ function renderStudentOptions() {
 }
 
 function applyTheme() { document.documentElement.setAttribute("data-theme", app.state.theme || "light"); }
-function getViewMode() { return localStorage.getItem(VIEW_MODE_KEY) === "compact" ? "compact" : "full"; }
-function setViewMode(mode) { localStorage.setItem(VIEW_MODE_KEY, mode === "compact" ? "compact" : "full"); }
+function getViewMode() {
+  if (!hasStorage()) return "full";
+  try { return localStorage.getItem(VIEW_MODE_KEY) === "compact" ? "compact" : "full"; } catch { return "full"; }
+}
+function setViewMode(mode) {
+  if (!hasStorage()) return;
+  try { localStorage.setItem(VIEW_MODE_KEY, mode === "compact" ? "compact" : "full"); } catch {}
+}
 function updateViewToggleUi() {
   const compact = getViewMode() === "compact";
   app.els.fullViewBtn.setAttribute("aria-pressed", String(!compact));
@@ -362,7 +384,7 @@ async function init() {
     studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel"), darkModeBtn: document.getElementById("darkModeBtn"), fullViewBtn: document.getElementById("fullViewBtn"), compactViewBtn: document.getElementById("compactViewBtn"), compactLegend: document.getElementById("compactLegend")
     };
     app.state = loadState();
-    if (!localStorage.getItem(STORAGE_KEY)) {
+    if (hasStorage() && !localStorage.getItem(STORAGE_KEY)) {
       const seeded = await loadDefaultFromRepo();
       if (seeded) { app.state = normalizeState(seeded); persist(); }
     }
