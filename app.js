@@ -31,13 +31,13 @@ const hasStorage = () => {
     localStorage.setItem(key, "1");
     localStorage.removeItem(key);
     return true;
-  } catch {
+  } catch (err) {
     return false;
   }
 };
 const persist = () => {
   if (!hasStorage()) return;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state)); } catch (err) {}
 };
 const getActiveStudent = () => {
   if (!app.state || !app.state.students) return null;
@@ -49,7 +49,8 @@ const getActiveStudent = () => {
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR", "CR"].includes(g);
 const logDebug = (msg) => {
-  const el = app.els?.debugPanel?.querySelector("#debugLog");
+  const panel = app.els && app.els.debugPanel ? app.els.debugPanel : null;
+  const el = panel ? panel.querySelector("#debugLog") : null;
   if (el) el.textContent = `${new Date().toISOString()} ${msg}\n${el.textContent || ""}`;
 };
 
@@ -80,7 +81,7 @@ function normalizeState(raw) {
 }
 function loadState() {
   if (!hasStorage()) return createDefaultState();
-  try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); } catch { return createDefaultState(); }
+  try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); } catch (err) { return createDefaultState(); }
 }
 
 function calculateGpa(student) {
@@ -158,11 +159,11 @@ function renderStudentOptions() {
 function applyTheme() { document.documentElement.setAttribute("data-theme", app.state.theme || "light"); }
 function getViewMode() {
   if (!hasStorage()) return "full";
-  try { return localStorage.getItem(VIEW_MODE_KEY) === "compact" ? "compact" : "full"; } catch { return "full"; }
+  try { return localStorage.getItem(VIEW_MODE_KEY) === "compact" ? "compact" : "full"; } catch (err) { return "full"; }
 }
 function setViewMode(mode) {
   if (!hasStorage()) return;
-  try { localStorage.setItem(VIEW_MODE_KEY, mode === "compact" ? "compact" : "full"); } catch {}
+  try { localStorage.setItem(VIEW_MODE_KEY, mode === "compact" ? "compact" : "full"); } catch (err) {}
 }
 function updateViewToggleUi() {
   const compact = getViewMode() === "compact";
@@ -373,7 +374,7 @@ async function loadDefaultFromRepo() {
     const data = await res.json();
     if (!data || !data.students) return null;
     return data;
-  } catch {
+  } catch (err) {
     return null;
   }
 }
@@ -394,7 +395,7 @@ async function init() {
   app.els.renameStudentBtn.addEventListener("click", () => { const s = getActiveStudent(); const name = prompt("Enter new student name", s.name); if (!name || !name.trim()) return; s.name = name.trim(); persist(); renderStudentOptions(); });
   app.els.deleteStudentBtn.addEventListener("click", () => { if (Object.keys(app.state.students).length === 1) return alert("At least one student profile must remain."); if (!confirm(`Delete ${getActiveStudent().name}?`)) return; delete app.state.students[app.state.activeStudentId]; app.state.activeStudentId = Object.keys(app.state.students)[0]; persist(); renderStudentOptions(); renderCurriculum(); });
   app.els.exportBtn.addEventListener("click", () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(app.state, null, 2)], { type: "application/json" })); a.download = "meen-advising-records.json"; a.click(); URL.revokeObjectURL(a.href); });
-  app.els.importInput.addEventListener("change", async (e) => { const file = e.target.files[0]; if (!file) return; try { app.state = normalizeState(JSON.parse(await file.text())); persist(); renderStudentOptions(); renderCurriculum(); } catch { alert("Could not import JSON file."); } finally { e.target.value = ""; } });
+  app.els.importInput.addEventListener("change", async (e) => { const file = e.target.files[0]; if (!file) return; try { app.state = normalizeState(JSON.parse(await file.text())); persist(); renderStudentOptions(); renderCurriculum(); } catch (err) { alert("Could not import JSON file."); } finally { e.target.value = ""; } });
   app.els.toggleDebugBtn.addEventListener("click", () => { app.els.debugPanel.style.display = app.els.debugPanel.style.display === "none" ? "block" : "none"; });
   app.els.addYearBtn.addEventListener("click", () => { app.state.yearCount += 1; persist(); renderCurriculum(); });
   app.els.toggleRulesBtn.addEventListener("click", () => { app.els.rulesPanel.style.display = app.els.rulesPanel.style.display === "none" ? "block" : "none"; });
@@ -407,7 +408,7 @@ async function init() {
     renderCurriculumRules();
   } catch (err) {
     console.error("Initialization failed:", err);
-    logDebug(`Initialization failed: ${err?.message || err}`);
+    logDebug(`Initialization failed: ${(err && err.message) ? err.message : err}`);
     app.state = createDefaultState();
     persist();
     renderStudentOptions();
