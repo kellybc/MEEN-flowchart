@@ -26,9 +26,19 @@ const app = { state: null, els: {} };
 
 const makeId = () => (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : `student-${Date.now()}`;
 const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
-const getActiveStudent = () => app.state.students[app.state.activeStudentId] || app.state.students[Object.keys(app.state.students)[0]];
+const getActiveStudent = () => {
+  if (!app.state || !app.state.students) return null;
+  const active = app.state.students[app.state.activeStudentId];
+  if (active && typeof active === "object") return active;
+  const first = app.state.students[Object.keys(app.state.students)[0]];
+  return first && typeof first === "object" ? first : null;
+};
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR", "CR"].includes(g);
+const logDebug = (msg) => {
+  const el = app.els?.debugPanel?.querySelector("#debugLog");
+  if (el) el.textContent = `${new Date().toISOString()} ${msg}\n${el.textContent || ""}`;
+};
 
 function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {}, placements: {}, repeats: {} } } }; }
 function normalizeState(raw) {
@@ -162,6 +172,11 @@ function nextGrade(current) {
 
 function renderCurriculum() {
   const student = getActiveStudent();
+  if (!student) {
+    app.els.curriculumGrid.innerHTML = `<section class="year-row"><h2>No student data</h2><p>Click "Add Student" to begin.</p></section>`;
+    app.els.gpaValue.textContent = "--";
+    return;
+  }
   app.els.curriculumGrid.innerHTML = "";
   const compactView = getViewMode() === "compact";
 
@@ -342,14 +357,15 @@ async function loadDefaultFromRepo() {
 }
 
 async function init() {
-  app.els = {
+  try {
+    app.els = {
     studentSelect: document.getElementById("studentSelect"), newStudentName: document.getElementById("newStudentName"), curriculumGrid: document.getElementById("curriculumGrid"), addStudentBtn: document.getElementById("addStudentBtn"), renameStudentBtn: document.getElementById("renameStudentBtn"), deleteStudentBtn: document.getElementById("deleteStudentBtn"), exportBtn: document.getElementById("exportBtn"), importInput: document.getElementById("importInput"), gpaValue: document.getElementById("gpaValue"), toggleDebugBtn: document.getElementById("toggleDebugBtn"), debugPanel: document.getElementById("debugPanel"), addYearBtn: document.getElementById("addYearBtn"), rulesGrid: document.getElementById("rulesGrid"), toggleRulesBtn: document.getElementById("toggleRulesBtn"), rulesPanel: document.getElementById("rulesPanel"), darkModeBtn: document.getElementById("darkModeBtn"), fullViewBtn: document.getElementById("fullViewBtn"), compactViewBtn: document.getElementById("compactViewBtn"), compactLegend: document.getElementById("compactLegend")
-  };
-  app.state = loadState();
-  if (!localStorage.getItem(STORAGE_KEY)) {
-    const seeded = await loadDefaultFromRepo();
-    if (seeded) { app.state = normalizeState(seeded); persist(); }
-  }
+    };
+    app.state = loadState();
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      const seeded = await loadDefaultFromRepo();
+      if (seeded) { app.state = normalizeState(seeded); persist(); }
+    }
 
   app.els.addStudentBtn.addEventListener("click", () => { const name = app.els.newStudentName.value.trim(); if (!name) return; const id = makeId(); app.state.students[id] = { id, name, courses: {}, placements: {}, repeats: {} }; app.state.activeStudentId = id; app.els.newStudentName.value = ""; persist(); renderStudentOptions(); renderCurriculum(); });
   app.els.studentSelect.addEventListener("change", () => { app.state.activeStudentId = app.els.studentSelect.value; persist(); renderCurriculum(); });
@@ -364,9 +380,18 @@ async function init() {
   app.els.fullViewBtn.addEventListener("click", () => { setViewMode("full"); renderCurriculum(); });
   app.els.compactViewBtn.addEventListener("click", () => { setViewMode("compact"); renderCurriculum(); });
 
-  renderStudentOptions();
-  renderCurriculum();
-  renderCurriculumRules();
+    renderStudentOptions();
+    renderCurriculum();
+    renderCurriculumRules();
+  } catch (err) {
+    console.error("Initialization failed:", err);
+    logDebug(`Initialization failed: ${err?.message || err}`);
+    app.state = createDefaultState();
+    persist();
+    renderStudentOptions();
+    renderCurriculum();
+    renderCurriculumRules();
+  }
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { init(); }); else init();
