@@ -30,10 +30,32 @@ const getActiveStudent = () => app.state.students[app.state.activeStudentId] || 
 const isPassing = (g) => ["A", "B", "C", "D"].includes(g);
 const isPrereqEligible = (g) => ["A", "B", "C", "D", "ENR", "CR"].includes(g);
 
-const compactStatus = !prereqOk ? "Locked" : grade === "ENR" ? "Enrolled" : "Available_Test";
-
 function createDefaultState() { const id = makeId(); return { activeStudentId: id, yearCount: 4, curriculumRules: {}, students: { [id]: { id, name: "New Student", courses: {}, placements: {}, repeats: {} } } }; }
-function loadState() { try { const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); if (!p || !p.students) return createDefaultState(); if (!p.yearCount || p.yearCount < 4) p.yearCount = 4; if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {}; Object.values(p.students).forEach((st) => { if (!st.placements) st.placements = {}; if (!st.repeats) st.repeats = {}; if (!st.courses) st.courses = {}; }); return p; } catch { return createDefaultState(); } }
+function normalizeState(raw) {
+  if (!raw || typeof raw !== "object" || !raw.students || typeof raw.students !== "object") return createDefaultState();
+  const p = raw;
+  if (!p.yearCount || p.yearCount < 4) p.yearCount = 4;
+  if (!p.curriculumRules || typeof p.curriculumRules !== "object") p.curriculumRules = {};
+  const normalizedStudents = {};
+  Object.entries(p.students).forEach(([studentKey, st]) => {
+    if (!st || typeof st !== "object") return;
+    const id = typeof st.id === "string" && st.id.trim() ? st.id : (typeof studentKey === "string" && studentKey.trim() ? studentKey : makeId());
+    normalizedStudents[id] = {
+      ...st,
+      id,
+      name: typeof st.name === "string" && st.name.trim() ? st.name.trim() : "New Student",
+      placements: st.placements && typeof st.placements === "object" ? st.placements : {},
+      repeats: st.repeats && typeof st.repeats === "object" ? st.repeats : {},
+      courses: st.courses && typeof st.courses === "object" ? st.courses : {}
+    };
+  });
+  p.students = normalizedStudents;
+  const studentIds = Object.keys(normalizedStudents);
+  if (!studentIds.length) return createDefaultState();
+  if (!p.activeStudentId || !normalizedStudents[p.activeStudentId]) p.activeStudentId = studentIds[0];
+  return p;
+}
+function loadState() { try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); } catch { return createDefaultState(); } }
 
 function calculateGpa(student) {
   let pts = 0, hrs = 0;
@@ -191,7 +213,8 @@ function renderCurriculum() {
             tile.title = `${code} — ${name} (${credits} cr)\nPrereq: ${rule.prereq || "—"} | Coreq: ${rule.coreq || "—"}\nGrade: ${grade || "Not Taken"}`;
             const stateLabel = !prereqOk ? "Locked" : (grade || "Not Taken");
             tile.setAttribute("aria-label", `${code}, ${name}, current grade ${grade || "Not Taken"}, status ${stateLabel}, click to change grade`);
-            tile.innerHTML = `<span class="compact-code">${code}</span><span class="compact-grade">${grade || "—"}</span><span class="compact-state">${compactStatus}</span>`;            
+            const compactStatus = !prereqOk ? "Locked" : grade === "ENR" ? "Enrolled" : "Available";
+            tile.innerHTML = `<span class="compact-code">${code}</span><span class="compact-grade">${grade || "—"}</span><span class="compact-state">${compactStatus}</span>`;
             tile.addEventListener("click", () => {
               if (!prereqOk) return;
               const newGrade = nextGrade(grade);
@@ -325,7 +348,7 @@ async function init() {
   app.state = loadState();
   if (!localStorage.getItem(STORAGE_KEY)) {
     const seeded = await loadDefaultFromRepo();
-    if (seeded) { app.state = seeded; persist(); }
+    if (seeded) { app.state = normalizeState(seeded); persist(); }
   }
 
   app.els.addStudentBtn.addEventListener("click", () => { const name = app.els.newStudentName.value.trim(); if (!name) return; const id = makeId(); app.state.students[id] = { id, name, courses: {}, placements: {}, repeats: {} }; app.state.activeStudentId = id; app.els.newStudentName.value = ""; persist(); renderStudentOptions(); renderCurriculum(); });
@@ -333,7 +356,7 @@ async function init() {
   app.els.renameStudentBtn.addEventListener("click", () => { const s = getActiveStudent(); const name = prompt("Enter new student name", s.name); if (!name || !name.trim()) return; s.name = name.trim(); persist(); renderStudentOptions(); });
   app.els.deleteStudentBtn.addEventListener("click", () => { if (Object.keys(app.state.students).length === 1) return alert("At least one student profile must remain."); if (!confirm(`Delete ${getActiveStudent().name}?`)) return; delete app.state.students[app.state.activeStudentId]; app.state.activeStudentId = Object.keys(app.state.students)[0]; persist(); renderStudentOptions(); renderCurriculum(); });
   app.els.exportBtn.addEventListener("click", () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(app.state, null, 2)], { type: "application/json" })); a.download = "meen-advising-records.json"; a.click(); URL.revokeObjectURL(a.href); });
-  app.els.importInput.addEventListener("change", async (e) => { const file = e.target.files[0]; if (!file) return; try { app.state = JSON.parse(await file.text()); persist(); renderStudentOptions(); renderCurriculum(); } catch { alert("Could not import JSON file."); } finally { e.target.value = ""; } });
+  app.els.importInput.addEventListener("change", async (e) => { const file = e.target.files[0]; if (!file) return; try { app.state = normalizeState(JSON.parse(await file.text())); persist(); renderStudentOptions(); renderCurriculum(); } catch { alert("Could not import JSON file."); } finally { e.target.value = ""; } });
   app.els.toggleDebugBtn.addEventListener("click", () => { app.els.debugPanel.style.display = app.els.debugPanel.style.display === "none" ? "block" : "none"; });
   app.els.addYearBtn.addEventListener("click", () => { app.state.yearCount += 1; persist(); renderCurriculum(); });
   app.els.toggleRulesBtn.addEventListener("click", () => { app.els.rulesPanel.style.display = app.els.rulesPanel.style.display === "none" ? "block" : "none"; });
